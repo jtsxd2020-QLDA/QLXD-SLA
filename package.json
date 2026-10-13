@@ -13,11 +13,15 @@
     "lint": "eslint .",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "tsx scripts/e2e.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "postinstall": "node scripts/prepare-map.mjs",
-    "prebuild": "node scripts/prepare-map.mjs"
+    "prebuild": "node scripts/prepare-map.mjs",
+    "data:migrate": "node --env-file=.env.cloud.local --import tsx scripts/migrate-supabase.ts",
+    "cloud:verify": "node --env-file=.env.cloud.local --import tsx scripts/verify-cloud.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.3",
     "lucide-react": "1.16.0",
     "maplibre-gl": "6.13.0",
     "next": "16.4.0",

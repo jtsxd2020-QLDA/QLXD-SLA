@@ -10,3 +10,6 @@ test-results/
 .DS_Store
 public/maplibre-gl-worker.mjs
 public/maplibre-gl-shared.mjs
+
+supabase/.temp/
+.vercel/

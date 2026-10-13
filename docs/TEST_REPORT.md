@@ -43,3 +43,17 @@ Build, TypeScript và lint đạt; unit/API/security 22/22 đạt, E2E bản bui
 Nền mặc định đổi sang Google Hybrid, cùng nguồn `lyrs=y` với bản tham khảo và ngôn ngữ tiếng Việt. Build/TypeScript, lint, unit/API/security 22/22 và E2E 22/22 nhóm đạt. Kiểm tra tile Google thực tế trả thành công và ảnh test-results/07-google-hybrid-thao-nguyen.png thấy tên/biểu tượng vườn mận, vườn hồng, La Ann MocChau, đường 104. POI phụ thuộc dữ liệu/mức zoom Google, không xác nhận mọi địa điểm đều có tên. Hai lựa chọn Google API chưa được xác minh với khóa thật.
 
 Đổi Google Hybrid/Esri/đường phố giữ vị trí chọn, marker GPXD/phản ánh và ranh giới; nhập/lưu 201/tải lại đủ hồ sơ, X/Escape, mobile390, không pageerror và mã hóa SQLite đều đạt trên dữ liệu thử riêng. Nền này là endpoint tile tương thích bản cũ, không phải Map Tiles API chính thức.
+
+## Hai chế độ người dân và quản lý — 13/10/2026
+
+Trang chính mở trực tiếp cổng bản đồ công dân; khu vực GPXD và hồ sơ đầy đủ yêu cầu tài khoản quản lý `admin@qlxd`. Lệnh `npm run admin:create` tạo tài khoản đầu tiên, nhập mật khẩu ẩn và lưu hash scrypt. Phản ánh công khai trả mã nhận hồ sơ nhưng không trả nội dung hoặc thông tin liên hệ. Bản nháp phản ánh được giữ khi đóng biểu mẫu để chọn điểm trên bản đồ.
+
+`npm run verify` đạt: typecheck, lint, 22/22 unit/security tests và production build. `npm run test:e2e` đạt 12 nhóm trên SQLite tạm và cổng ngẫu nhiên: phân biệt quyền công khai/quản lý, kiểm tra Host/Origin/CSRF, đăng nhập, tạo GPXD qua giao diện, gửi phản ánh công khai sau khi chọn điểm trên bản đồ, kiểm tra marker, mã hóa dữ liệu và đăng xuất. Lệnh `npm run admin:create` cũng chạy thành công qua Terminal tương tác với thư mục tạm; mật khẩu nhập ẩn và thư mục kiểm thử đã được xóa.
+
+Đây vẫn là bản cục bộ một máy: `npm start` chỉ lắng nghe tại `127.0.0.1`, chưa có URL Internet cho người dân, cơ sở dữ liệu dùng chung, CAPTCHA/WAF, nhiều tài khoản quản lý hoặc khôi phục mật khẩu. Xem giới hạn tại `docs/SECURITY_REVIEW.md`.
+
+## Backend cloud — 13/10/2026
+
+Typecheck, lint, 25 unit tests, build và 12 nhóm E2E local đã đạt sau khi chuyển API sang lớp lưu trữ bất đồng bộ. Kiểm thử bổ sung: Vercel bắt buộc kho Supabase, thiếu cấu hình không tạo SQLite, đọc đúng định dạng mã hóa cũ và từ chối sai khóa, kiểm tra chính xác tên miền production/deployment.
+
+Chưa thực hiện migration hoặc kiểm thử quyền trên Supabase thật; đang chờ người dùng hoàn tất tạo dự án riêng. Script `cloud:verify` được chuẩn bị nhưng chưa chạy live. Không suy diễn kiểm thử local thành triển khai online thành công.

@@ -1,4 +1,10 @@
-import { checkLocalRequest,errorResponse,json,sessionToken } from '@/lib/security';
-import { findSession,verifyAccessCode } from '@/lib/store';
+import { checkSameOriginRequest,errorResponse,json,sessionToken } from '@/lib/security';
+import { findAdminSession } from '@/lib/persistence';
 export const runtime='nodejs';
-export async function GET(request:Request) {try{checkLocalRequest(request);verifyAccessCode('');const token=sessionToken(request),session=token?findSession(token):undefined;return json({authenticated:!!session,mode:'local',...(session?{csrfToken:session.csrf}:{})});}catch(e){return errorResponse(e);}}
+export async function GET(request:Request) {
+  try {
+    checkSameOriginRequest(request);
+    const token=sessionToken(request),session=token?await findAdminSession(token):undefined;
+    return json({authenticated:!!session,mode:session?'admin':'citizen',...(session?{csrfToken:session.csrf,email:'admin@qlxd'}:{})});
+  }catch(e){return errorResponse(e);}
+}

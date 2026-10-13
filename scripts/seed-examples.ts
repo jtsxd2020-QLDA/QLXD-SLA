@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs';
 import { resolveCommune } from '../lib/geo-server';
 import { geometryBounds, type BoundaryCollection } from '../lib/geometry';
 import communes from '../lib/communes.json';
-import type { PermitInput, ReportInput, RecordsResponse } from '../lib/types';
+import type { PermitInput, ReportInput } from '../lib/types';
+import {insertPermit,insertReport,listRecords} from '../lib/store';
+import {validatePermit,validateReport} from '../lib/validation';
 
 // Synthetic locations and people: never represent actual buildings or allegations.
-const base = 'http://127.0.0.1:3100';
 const prefix = 'MAU-TINH-2026-';
 const disclaimer = 'DỮ LIỆU MINH HỌA: công trình, chủ đầu tư, kết quả kiểm tra và vị trí đều giả định; không phải giấy phép hoặc kết luận vi phạm thực tế.';
 const areas = [
@@ -64,33 +65,20 @@ for(const area of areas) {
   }
 }
 async function main() {
-  const accessCode=readFileSync('data/access-code.txt','utf8').trim();
-  const login=await fetch(base+'/api/login',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({accessCode})});
-  if(!login.ok) throw new Error(`Đăng nhập thất bại ${login.status}`);
-  const cookie=login.headers.get('set-cookie')!.split(';')[0];
-  const session=await login.json() as {data:{csrfToken:string}};
-  const headers={Origin:base,'Content-Type':'application/json',Cookie:cookie,'x-csrf-token':session.data.csrfToken};
-  async function readRecords() {
-    const response=await fetch(base+'/api/records',{headers});
-    if(!response.ok) throw new Error(`Đọc hồ sơ thất bại ${response.status}`);
-    return (await response.json() as {data:RecordsResponse}).data;
-  }
-  const before=await readRecords(); let addedPermits=0,addedReports=0;
+  const before=listRecords(); let addedPermits=0,addedReports=0;
   for(const [path,inputs] of [['permits',permits],['reports',reports]] as const) {
     for(const input of inputs) {
       const exists='permitNumber' in input?before.permits.some(p=>p.permitNumber===input.permitNumber):before.reports.some(r=>r.title===input.title);
       if(exists) continue;
-      const response=await fetch(`${base}/api/${path}`,{method:'POST',headers,body:JSON.stringify(input)});
-      if(response.status!==201) throw new Error(`Tạo ${path} thất bại ${response.status}: ${await response.text()}`);
-      if(path==='permits') addedPermits++;else addedReports++;
+      if(path==='permits'){insertPermit(validatePermit(input));addedPermits++;}
+      else {insertReport(validateReport(input));addedReports++;}
     }
   }
-  const after=await readRecords();
+  const after=listRecords();
   const seededPermits=after.permits.filter(p=>p.permitNumber.startsWith(prefix));
   const seededReports=after.reports.filter(r=>reports.some(input=>input.title===r.title));
   const wrong=seededPermits.filter(p=>p.notes.includes('Kết quả: SAI PHÉP.')).length;
   if(seededPermits.length!==15||seededReports.length!==10||wrong!==5)throw new Error('Số lượng dữ liệu minh họa không khớp');
   console.log(JSON.stringify({addedPermits,addedReports,verified:{permits:seededPermits.length,wrongPermits:wrong,reports:seededReports.length},distribution:areas.map(a=>({name:a.name,permits:seededPermits.filter(p=>p.communeCode===communes.find(c=>c.name===a.name)!.code).length,wrong:a.wrong,reports:a.reports}))},null,2));
-  await fetch(base+'/api/logout',{method:'POST',headers});
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

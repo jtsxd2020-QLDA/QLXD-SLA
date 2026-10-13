@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-10",
-  "milestone": "Giao diện tỉnh, nhập GPXD và ghi phản ánh trên bản đồ",
-  "status": "completed_local",
+  "date": "2026-10-13",
+  "milestone": "Cổng công dân, tài khoản quản lý và backend Supabase",
+  "status": "verified_local_cloud_target_pending",
   "applicationUrl": "http://127.0.0.1:3100",
   "team": {
     "root": "Khung, bản đồ, ranh giới, tích hợp và kiểm chứng",
@@ -12,15 +12,28 @@
   "verification": {
     "typecheck": "passed",
     "lint": "passed",
-    "unitTests": { "passed": 16, "total": 16 },
-    "httpAndBrowserChecks": { "passed": 13, "total": 13 },
+    "unitTests": {
+      "passed": 25,
+      "total": 25
+    },
+    "e2eGroups": {
+      "passed": 12,
+      "total": 12
+    },
     "productionBuild": "passed_local",
+    "publicCitizenPortal": "passed_e2e_local",
+    "adminEmailLogin": "passed_e2e_local",
+    "citizenMapReportSubmission": "passed_e2e_local",
+    "managementPermitEntry": "passed_e2e_local",
+    "internetDeployment": "existing_online_version_not_yet_updated",
     "boundaryFeatures": 75,
     "boundaryOfficiallyApproved": false,
     "externalBasemap": "connection_failed_in_test_environment",
     "dependencyAuditReportedVulnerabilities": 0,
     "initialRealPermits": 0,
-    "initialRealCitizenReports": 0
+    "initialRealCitizenReports": 0,
+    "supabaseMigration": "waiting_for_user_project_creation",
+    "cloudSecurity": "code_review_passed_live_verification_pending"
   },
   "remainingForProvincialProduction": [
     "Tài khoản cá nhân, phân quyền đơn vị và địa bàn tại máy chủ/cơ sở dữ liệu",

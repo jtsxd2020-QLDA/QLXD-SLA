@@ -4,7 +4,7 @@ Phạm vi: giao diện tỉnh, nhập GPXD, ghi phản ánh tại vị trí bả
 
 Nền giao diện tham khảo: `../QUAN LY TRAT TU XAY DUNG/ttxd-sonla` (sidebar xanh #1D3A6E, bảng, biểu mẫu và MapLibre). Khung mới tại thư mục này nhằm có bản đầu độc lập, không thừa kế auth demo hoặc khóa dự án cũ.
 
-Stack hiện tại: Next.js 16.4.0/React 19.3.0, MapLibre 6.13.0, Node 24 SQLite. Thư viện nâng lên bản khắc phục cảnh báo audit trước nghiệm thu. Đọc tài liệu Next.js có sẵn hoặc tài liệu chính thức trước khi sửa API framework. Cấu hình localhost-only, dữ liệu/khóa trong data/ (bỏ qua Git). Đây chưa phải hệ thống vận hành đa người dùng cấp tỉnh.
+Stack hiện tại: Next.js 16.4.0/React 19.3.0, MapLibre 6.13.0, Node 24 SQLite. Thư viện nâng lên bản khắc phục cảnh báo audit trước nghiệm thu. Đọc tài liệu Next.js có sẵn hoặc tài liệu chính thức trước khi sửa API framework. Bản đầu có cổng bản đồ và gửi phản ánh công khai cùng không gian quản lý yêu cầu tài khoản; dữ liệu/khóa trong data/ (bỏ qua Git). Đây chưa phải hệ thống vận hành đa người dùng cấp tỉnh.
 
 Phân công: root quản lý khung, types, geodata, bản đồ, tích hợp; agent UI sở hữu components/Workspace.tsx, components/RecordForm.tsx, app/globals.css; agent dữ liệu sở hữu lib/store.ts, lib/security.ts, lib/validation.ts, app/api/**; agent QA sở hữu tests/**, scripts/e2e.ts và docs/SECURITY_REVIEW.md. Trao đổi trước khi sửa file của nhau.
 

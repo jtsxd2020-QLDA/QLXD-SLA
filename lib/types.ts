@@ -16,4 +16,5 @@ export type CitizenReport = ReportInput & { id: string; publicCode: string; crea
 export type MapRecord = { id: string; kind: 'permit' | 'report'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string };
 export type RecordsResponse = { permits: Permit[]; reports: CitizenReport[] };
 export type ApiResult<T> = { data: T } | { error: string; fields?: Record<string, string> };
-export type SessionInfo = { authenticated: boolean; mode: 'local'; csrfToken?: string };
+export type SessionInfo = { authenticated: boolean; mode: 'citizen'|'admin'; csrfToken?: string; email?: string };
+export type PublicMapResponse = { records: MapRecord[] };
