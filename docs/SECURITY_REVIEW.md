@@ -33,3 +33,7 @@ Khóa AES nằm cạnh cơ sở dữ liệu trong thư mục riêng của máy. 
 Giữ ciphertext AES-GCM và hash scrypt hiện có. Các API đã await xác thực và thao tác dữ liệu; cloud thiếu khóa/cấu hình không dùng SQLite thay thế. Migration bật RLS và thu hồi quyền anon/authenticated cho sáu bảng, RPC rate limit chỉ cho service_role. Giới hạn đăng nhập, gửi phản ánh và đọc bản đồ dùng bộ đếm SQL nguyên tử theo IP khi chạy cloud. Tên miền canonical/deployment kiểm tra chính xác. Khóa máy chủ không được đưa vào biến NEXT_PUBLIC.
 
 Agent rà soát mã không phát hiện đường bỏ qua xác thực/CSRF trong phạm vi đã đọc. Quyền anon thực tế, bộ đếm đồng thời, phiên qua nhiều tiến trình và API production vẫn phải kiểm chứng sau khi tạo dự án, chuyển dữ liệu và triển khai. Giới hạn phiên quản lý còn ở bộ nhớ mỗi máy chủ; API bản đồ đọc toàn bộ ciphertext; chưa có phân quyền cán bộ theo xã/phường.
+
+## Xác minh live — 13/10/2026
+
+Supabase riêng và Vercel production đã qua kiểm tra anon SELECT/INSERT/RPC bị từ chối; bộ đếm SQL nguyên tử; phiên qua tiến trình mới; private API 401; CSRF 403; logout hủy phiên; công khai chỉ trả tám trường map; giữ nguyên ciphertext và hash/salt gốc. Kiểm thử tạo hồ sơ qua giao diện online dùng dữ liệu QA tạm và đã dọn. Các giới hạn phân quyền địa bàn, quy trình sao lưu/khôi phục và tải lớn nêu trên vẫn còn.

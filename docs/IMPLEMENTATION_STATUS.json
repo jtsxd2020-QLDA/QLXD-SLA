@@ -1,8 +1,8 @@
 {
   "date": "2026-10-13",
   "milestone": "Cổng công dân, tài khoản quản lý và backend Supabase",
-  "status": "cloud_data_verified_deployment_pending",
-  "applicationUrl": "http://127.0.0.1:3100",
+  "status": "verified_online_initial_release",
+  "applicationUrl": "https://qlxd-sla.vercel.app",
   "team": {
     "root": "Khung, bản đồ, ranh giới, tích hợp và kiểm chứng",
     "ui": "Giao diện, biểu mẫu và trợ năng",
@@ -21,14 +21,14 @@
       "total": 12
     },
     "productionBuild": "passed_local",
-    "publicCitizenPortal": "passed_e2e_local",
-    "adminEmailLogin": "passed_e2e_local",
-    "citizenMapReportSubmission": "passed_e2e_local",
-    "managementPermitEntry": "passed_e2e_local",
-    "internetDeployment": "existing_online_version_not_yet_updated",
+    "publicCitizenPortal": "passed_production_browser",
+    "adminEmailLogin": "passed_production_browser_temporary_QA_account_removed_existing_admin_hash_preserved",
+    "citizenMapReportSubmission": "passed_production_browser_temporary_record_removed",
+    "managementPermitEntry": "passed_production_browser_temporary_record_removed",
+    "internetDeployment": "production_ready_and_live_flow_verified",
     "boundaryFeatures": 75,
     "boundaryOfficiallyApproved": false,
-    "externalBasemap": "connection_failed_in_test_environment",
+    "externalBasemap": "Google_Hybrid_tiles_and_labels_visible_in_production_browser",
     "dependencyAuditReportedVulnerabilities": 0,
     "initialRealPermits": 0,
     "initialRealCitizenReports": 0,
@@ -40,13 +40,17 @@
       "communes": 75,
       "result": "verified"
     },
-    "cloudSecurity": "anon_access_denied_concurrent_limit_and_cross_process_session_passed"
+    "cloudSecurity": "anon_denied_atomic_limit_cross_process_session_private_API_CSRF_logout_verified",
+    "productionSourceCommit": "9944a680b1ee9c2d2a3ca643552a4eeb0102a953",
+    "supabaseProjectRef": "ghyurzhocmvxuyqyerfv",
+    "existingAdminPasswordLogin": "hash_preserved_exactly_user_password_not_known_to_agent"
   },
   "remainingForProvincialProduction": [
     "Tài khoản cá nhân, phân quyền đơn vị và địa bàn tại máy chủ/cơ sở dữ liệu",
     "Xác nhận nguồn ranh giới chính thức và hình học đã chuẩn hóa",
     "Nền bản đồ được kiểm chứng truy cập và cấp phép phù hợp",
     "Tệp giấy phép/ảnh, giao xử lý phản ánh và nghiệp vụ kiểm tra/vi phạm",
-    "Sao lưu, khôi phục, giám sát, thử tải và môi trường triển khai chính thức"
+    "Sao lưu, khôi phục, giám sát, thử tải và môi trường triển khai chính thức",
+    "Xác nhận người dùng tự đăng nhập admin@qlxd bằng mật khẩu hiện có"
   ]
 }

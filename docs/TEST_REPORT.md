@@ -61,3 +61,9 @@ Chưa thực hiện migration hoặc kiểm thử quyền trên Supabase thật;
 ## Supabase thật — 13/10/2026
 
 Dự án riêng `ghyurzhocmvxuyqyerfv`: đối chiếu từng ciphertext, salt/hash tài khoản và 75 geometry/provenance thành công. Cả sáu bảng từ chối anon SELECT/INSERT; RPC bị từ chối. 20 yêu cầu đồng thời với ngưỡng 3 chỉ nhận đúng 3, yêu cầu kế tiếp tiếp tục bị từ chối. Phiên cloud đọc được qua tiến trình khác và bị vô hiệu sau xóa phiên QA. Giữ nguyên dữ liệu local và bản sao lưu. API production vẫn chờ triển khai mới để kiểm tra.
+
+## Production Vercel — 13/10/2026
+
+Deployment `4G9S36Kue3gxNZfBi8cPPwkHtPJC`, commit `9944a68`, URL `https://qlxd-sla.vercel.app`: đã kiểm tra API công khai 25 điểm, API chi tiết 401 khi ẩn danh, đọc quản lý bằng phiên QA, ghi thiếu CSRF 403, logout khiến phiên cũ 401. Kiểm thử Chrome bằng tài khoản QA tạm: đăng nhập, nhập GPXD tại Thảo Nguyên, hồ sơ hiện trên bản đồ; đăng xuất về cổng công dân, chọn điểm trực tiếp trên bản đồ, gửi phản ánh và nhận mã. Hồ sơ QA và tài khoản QA được dọn theo định danh chính xác sau kiểm tra; dữ liệu gốc còn 15 GPXD/10 phản ánh/75 địa bàn/1 admin, không còn phiên QA. Ảnh vệ tinh và nhãn địa danh Google hiển thị tại trình duyệt production.
+
+Tài khoản admin@qlxd đã được đối chiếu salt/hash nguyên vẹn; không biết mật khẩu người dùng nên chưa khẳng định đã đăng nhập bằng chính mật khẩu đó. Bằng chứng hình ảnh local trong test-results/ (bỏ qua Git).
