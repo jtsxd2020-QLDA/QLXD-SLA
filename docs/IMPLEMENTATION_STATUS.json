@@ -1,7 +1,7 @@
 {
   "date": "2026-10-13",
   "milestone": "Cổng công dân, tài khoản quản lý và backend Supabase",
-  "status": "verified_local_cloud_target_pending",
+  "status": "cloud_data_verified_deployment_pending",
   "applicationUrl": "http://127.0.0.1:3100",
   "team": {
     "root": "Khung, bản đồ, ranh giới, tích hợp và kiểm chứng",
@@ -32,8 +32,15 @@
     "dependencyAuditReportedVulnerabilities": 0,
     "initialRealPermits": 0,
     "initialRealCitizenReports": 0,
-    "supabaseMigration": "waiting_for_user_project_creation",
-    "cloudSecurity": "code_review_passed_live_verification_pending"
+    "supabaseMigration": {
+      "projectRef": "ghyurzhocmvxuyqyerfv",
+      "permits": 15,
+      "reports": 10,
+      "adminAccounts": 1,
+      "communes": 75,
+      "result": "verified"
+    },
+    "cloudSecurity": "anon_access_denied_concurrent_limit_and_cross_process_session_passed"
   },
   "remainingForProvincialProduction": [
     "Tài khoản cá nhân, phân quyền đơn vị và địa bàn tại máy chủ/cơ sở dữ liệu",

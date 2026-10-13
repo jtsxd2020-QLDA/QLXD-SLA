@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {consumeRateLimit,createAdminSession,deleteAdminSession,findAdminSession,listRecords} from '../lib/cloud-store';
 
+async function main(){
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_ANON_KEY;
 assert.ok(url&&key,'Anon key and URL required for direct access tests');
 const anon=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -43,3 +44,6 @@ const transfer=JSON.parse(readFileSync('data/cloud-transfer.json','utf8'));const
 for(const row of transfer.permits)assert.ok(records.permits.some(r=>r.id===row.id));
 for(const row of transfer.reports)assert.ok(records.reports.some(r=>r.id===row.id));
 console.log('PASS original migrated records retained and decryptable');
+
+}
+main().catch(()=>{console.error("Cloud operation failed; check target, schema and private configuration.");process.exitCode=1;});

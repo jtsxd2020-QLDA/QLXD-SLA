@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {decodeEnvelope} from '../lib/cloud-store';
 
 // An explicit target prevents accidentally importing into another connected project.
+async function main(){
 const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const expected=process.env.TTXD_MIGRATION_PROJECT_REF;
 if(!url||!key||!expected||new URL(url).hostname!==`${expected}.supabase.co`)throw new Error('Explicit migration target required');
@@ -34,3 +35,6 @@ const geo=JSON.parse(readFileSync('geodata/sonla.full.geojson','utf8'));
 const provenance=JSON.parse(readFileSync('geodata/provenance.json','utf8'));
 await copy('ttxd_communes','commune_code',geo.features.map((f:{properties:{communeCode:string,name:string,type:string},geometry:unknown})=>({commune_code:f.properties.communeCode,name:f.properties.name,kind:f.properties.type,geometry:f.geometry,provenance})));
 console.log('Migration verified. Local data and passwords retained; local sessions were not copied.');
+
+}
+main().catch(()=>{console.error("Cloud operation failed; check target, schema and private configuration.");process.exitCode=1;});

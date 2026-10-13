@@ -57,3 +57,7 @@ Trang chính mở trực tiếp cổng bản đồ công dân; khu vực GPXD v�
 Typecheck, lint, 25 unit tests, build và 12 nhóm E2E local đã đạt sau khi chuyển API sang lớp lưu trữ bất đồng bộ. Kiểm thử bổ sung: Vercel bắt buộc kho Supabase, thiếu cấu hình không tạo SQLite, đọc đúng định dạng mã hóa cũ và từ chối sai khóa, kiểm tra chính xác tên miền production/deployment.
 
 Chưa thực hiện migration hoặc kiểm thử quyền trên Supabase thật; đang chờ người dùng hoàn tất tạo dự án riêng. Script `cloud:verify` được chuẩn bị nhưng chưa chạy live. Không suy diễn kiểm thử local thành triển khai online thành công.
+
+## Supabase thật — 13/10/2026
+
+Dự án riêng `ghyurzhocmvxuyqyerfv`: đối chiếu từng ciphertext, salt/hash tài khoản và 75 geometry/provenance thành công. Cả sáu bảng từ chối anon SELECT/INSERT; RPC bị từ chối. 20 yêu cầu đồng thời với ngưỡng 3 chỉ nhận đúng 3, yêu cầu kế tiếp tiếp tục bị từ chối. Phiên cloud đọc được qua tiến trình khác và bị vô hiệu sau xóa phiên QA. Giữ nguyên dữ liệu local và bản sao lưu. API production vẫn chờ triển khai mới để kiểm tra.
