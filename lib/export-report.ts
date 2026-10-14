@@ -43,9 +43,9 @@ export async function exportPdf(snapshot:AnalyticsSnapshot){
   const chunks:Buffer[]=[];doc.on('data',c=>chunks.push(Buffer.from(c)));doc.on('end',()=>resolve(Buffer.concat(chunks)));doc.on('error',reject);
   try{
    // File read keeps the bundled font in Next.js output tracing; OFL licence accompanies it.
-   doc.registerFont('Noto',readFileSync(join(process.cwd(),'assets/fonts/NotoSans.ttf')));doc.font('Noto');
+   doc.registerFont('Liberation',readFileSync(join(process.cwd(),'assets/fonts/LiberationSans-Regular.ttf')));doc.font('Liberation');
    const width=doc.page.width-68,bottom=doc.page.height-48;
-   const ensure=(height:number)=>{if(doc.y+height>bottom){doc.addPage();doc.font('Noto');}};
+   const ensure=(height:number)=>{if(doc.y+height>bottom){doc.addPage();doc.font('Liberation');}};
    const paragraph=(value:string,size=10)=>{doc.fontSize(size);const height=doc.heightOfString(value,{width});ensure(height+8);doc.fillColor('#24344c').text(value,34,doc.y,{width});doc.moveDown(.4);};
    paragraph('BÁO CÁO ĐIỀU HÀNH TTXD SƠN LA',19);
    paragraph(`Mã: ${snapshot.id} | Xuất: ${new Date(snapshot.generatedAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}`,9);
@@ -56,7 +56,7 @@ export async function exportPdf(snapshot:AnalyticsSnapshot){
    bars('PHÂN LOẠI',snapshot.breakdown.map(b=>({label:b.label,count:b.count})));
    bars('ĐỊA BÀN CÓ HỒ SƠ',snapshot.communes.filter(c=>c.count>0).map(c=>({label:c.name,count:c.count})));
    paragraph('GHI CHÚ PHƯƠNG PHÁP',13);for(const note of snapshot.notes)paragraph(note,9);
-   doc.addPage();doc.font('Noto');paragraph(`DANH SÁCH CHI TIẾT - ${snapshot.total} HỒ SƠ`,14);paragraph('Thông tin liên hệ không có trong báo cáo mặc định.',9);
+   doc.addPage();doc.font('Liberation');paragraph(`DANH SÁCH CHI TIẾT - ${snapshot.total} HỒ SƠ`,14);paragraph('Thông tin liên hệ không có trong báo cáo mặc định.',9);
    if(!snapshot.rows.length)paragraph('Không có hồ sơ theo bộ lọc.');
    // Detail records in a two-column labelled table prevent wide tables clipping on A4.
    snapshot.rows.forEach((row,index)=>{
@@ -68,7 +68,7 @@ export async function exportPdf(snapshot:AnalyticsSnapshot){
     }
     ensure(12);doc.moveTo(34,doc.y).lineTo(34+width,doc.y).strokeColor('#d8e1ed').stroke();doc.y+=12;
    });
-   const range=doc.bufferedPageRange();for(let p=range.start;p<range.start+range.count;p++){doc.switchToPage(p);const margin=doc.page.margins.bottom;doc.page.margins.bottom=0;doc.font('Noto').fontSize(8).fillColor('#69798e').text(`QLXD-SLA | ${snapshot.id} | Trang ${p+1}/${range.count}`,34,doc.page.height-29,{width,align:'right',lineBreak:false});doc.page.margins.bottom=margin;}
+   const range=doc.bufferedPageRange();for(let p=range.start;p<range.start+range.count;p++){doc.switchToPage(p);const margin=doc.page.margins.bottom;doc.page.margins.bottom=0;doc.font('Liberation').fontSize(8).fillColor('#69798e').text(`QLXD-SLA | ${snapshot.id} | Trang ${p+1}/${range.count}`,34,doc.page.height-29,{width,align:'right',lineBreak:false});doc.page.margins.bottom=margin;}
    doc.end();
   }catch(e){reject(e);doc.destroy();}
  });

@@ -28,3 +28,27 @@ The capture rejects more than 10,000 total source records (all groups combined) 
 - QA SQL rows cleaned; temporary PostgreSQL server stopped. No live database writes, production changes, or deployments were made by the backend agent.
 
 Supabase changelog and RPC docs were reviewed. New-table API exposure changes are handled by explicit service-role grants and explicit revocation from anonymous/authenticated roles. PostgreSQL legacy pgcrypto cipher changes do not apply to this app's Node AES-GCM encrypted payloads.
+
+## Production PDF packaging regression
+
+The production PDF endpoint failed while Excel succeeded. PDFKit 0.20.2 lazily loads standard font modules with `createRequire(import.meta.url)`. The previous webpack bundle embedded an absolute PDFKit path belonging to the build machine, and the route trace omitted PDFKit's runtime modules. Local export succeeded because the original package still existed, so ordinary local PDF tests did not expose relocation failure.
+
+Fix: keep PDFKit external in `next.config.mjs`, and explicitly trace PDFKit `js`/`lib`/package metadata plus the Vietnamese font/licence for `/api/analytics/export`. Exclude ignored private `data/**` scripts from production TypeScript source discovery; application source, scripts and tests remain included.
+
+Build passed. The actual compiled route and exactly its traced dependencies were copied to a fresh deployment directory, then invoked with an isolated encrypted SQLite snapshot and admin session. Both Excel and PDF returned HTTP 200; PDF header was `%PDF-`. No live account, data, credentials or production request was used. This check is reusable via `node --import tsx scripts/verify-export-bundle.ts` after a build. Root must additionally verify the newly deployed production endpoint.
+
+## PDF Unicode text extraction regression and final font
+
+A richer fixture found an additional issue beyond the initial packaging fix: the prior Noto variable font's shaping/subset mappings could reuse base glyph IDs for different Vietnamese characters. The rendered PDF looked correct, but both Poppler and PDF.js could extract `trong` as `trọng`, `office` as `ọffice`, or omit a Vietnamese mark. Pypdf additionally rejected empty destination mappings in PDFKit's range table. Disabling Latin ligatures alone did not fix the underlying Vietnamese mapping issue and was reverted.
+
+Final fix: use the unmodified static Liberation Sans 2.1.5 regular font, from the official upstream release, under OFL 1.1. Font, licence and source/archive checksum are recorded in `assets/fonts/LiberationSans-SOURCE.md`; runtime tracing includes the new font and licence. Removed the unused Noto font/licence. All default shaping features remain enabled; no PDFKit internals, ToUnicode rewriting, or combining-feature patches are used.
+
+Executed final checks:
+
+- Official release archive SHA256 matched the Homebrew font-liberation cask hash.
+- Strict pypdf extraction with warnings treated as errors, Poppler and PDF.js each preserved exact Vietnamese title, UUID, permit IDs containing `office`/`affinity`, Vietnamese locality names and Latin ligature candidates in the isolated fixture.
+- Updated `scripts/verify-export-bundle.ts` includes a nonempty permit fixture with Vietnamese names and `office`/`ff`/`fi`. After build, the relocated compiled route returned Excel 200 and PDF 200 (19,197 bytes), and automated Poppler assertions verified every fixture row and exact Unicode text. This local QA script requires `pdftotext` (Poppler) in PATH.
+- Final production build, complete ESLint and typecheck passed. Full unit suite: 43 passed.
+- Independent QA additionally generated 18 rows/four pages with a complete Vietnamese tone inventory and verified exact text via Poppler/PDF.js, then inspected first/last-page renders.
+
+These are local/relocated-runtime checks. Root is responsible for verifying the final new production deployment and its exported documents before declaring release complete.

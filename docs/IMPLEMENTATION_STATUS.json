@@ -1,7 +1,7 @@
 {
   "date": "2026-10-14",
   "milestone": "Chọn vị trí, biểu mẫu điện thoại và báo cáo điều hành Excel/PDF",
-  "status": "upgrade_local_verified_cloud_backend_verified_pending_deployment",
+  "status": "upgrade_production_verified_pdf_copy_fix_verified_locally_pending_release",
   "applicationUrl": "https://qlxd-sla.vercel.app",
   "team": {
     "root": "Khung, bản đồ, ranh giới, tích hợp và kiểm chứng",
@@ -41,7 +41,7 @@
       "result": "verified"
     },
     "cloudSecurity": "anon_denied_atomic_limit_cross_process_session_private_API_CSRF_logout_verified",
-    "productionSourceCommit": "9944a680b1ee9c2d2a3ca643552a4eeb0102a953",
+    "productionSourceCommit": "73a9005862078f05cb080b0aa27e55796203a9dc",
     "supabaseProjectRef": "ghyurzhocmvxuyqyerfv",
     "existingAdminPasswordLogin": "hash_preserved_exactly_user_password_not_known_to_agent",
     "upgradeE2E": {
@@ -57,9 +57,12 @@
       "demoReports": 10,
       "legacyUnknownPermits": 1
     },
-    "upgradeInternetDeployment": "pending",
-    "upgradePDF": "render_and_Vietnamese_text_passed",
-    "upgradeExcel": "reopened_typed_dates_formula_strings_snapshot_verified"
+    "upgradeInternetDeployment": "production_API_filters_source_totals_six_exports_CSRF_public_fields_logout_verified",
+    "upgradePDF": "render_exact_Vietnamese_Poppler_PDFjs_passed_copy_fix_pending_release",
+    "upgradeExcel": "production_files_reopened_no_formulas_filtered_rows_match_snapshot",
+    "productionDeploymentId": "dpl_BSGoUiNEbL6T9xLxamNREkpD13eV",
+    "upgradeMobileLogout": "360_640_visible_44px_session_revoked_draft_cleared_verified",
+    "upgradeCloudDataPreservation": "16_permits_10_reports_original_business_fields_and_admin_credentials_preserved"
   },
   "remainingForProvincialProduction": [
     "Tài khoản cá nhân, phân quyền đơn vị và địa bàn tại máy chủ/cơ sở dữ liệu",

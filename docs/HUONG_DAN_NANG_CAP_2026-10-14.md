@@ -34,3 +34,7 @@ GPXD theo ngày cấp và GPXD theo ngày nhập là hai cách tính khác nhau.
 Không gọi số ngày từ tiếp nhận là số ngày quá hạn. Chưa đủ lịch sử thì không suy ra tồn cuối kỳ trong quá khứ. Báo cáo mặc định không xuất tên/số điện thoại người phản ánh hoặc nội dung riêng; ranh giới tiếp tục là tham khảo.
 
 Mỗi báo cáo tối đa 10.000 hồ sơ nguồn; xuất tệp tối đa 5.000 dòng. Nếu vượt, hệ thống báo rõ, cần thu hẹp kỳ/địa bàn; không âm thầm cắt dữ liệu.
+
+## Đăng xuất trên điện thoại
+
+Nút **Đăng xuất** nằm trên thanh đầu trang của không gian quản lý. Khi đăng xuất thành công, phiên quản lý bị hủy và các nháp quản lý trên thiết bị được xóa; màn hình trở lại bản đồ dành cho người dân.

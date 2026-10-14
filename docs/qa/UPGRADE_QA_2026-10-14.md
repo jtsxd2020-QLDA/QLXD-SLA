@@ -29,3 +29,24 @@ Render PNG trang đầu phát hiện nhãn biểu đồ từ tháng thứ hai b�
 ## Giới hạn
 
 Không đọc khóa, mật khẩu hoặc dữ liệu thật; không sửa cloud và không triển khai. Xác nhận production/schema/RLS/migration và kiểm tra dữ liệu cũ thuộc bước nghiệm thu điều phối.
+
+## Kiểm chứng sửa lỗi sau production smoke
+
+Bản production có lỗi PDF 500 do PDFKit giữ đường dẫn máy build; sau chỉnh external package/tracing, QA đã thử độc lập môi trường đóng gói local:
+
+- Quét trace export: 299 tệp đều tồn tại; NotoSans được đưa vào trace, có 17 module phông chuẩn; không thấy đường dẫn PDFKit trỏ máy build.
+- Sao chép chỉ các tệp trace và compiled route sang thư mục tạm, thay đổi cwd sang thư mục mới, tạo snapshot và session bằng dữ liệu mã hóa tổng hợp. Gọi chính handler compiled với session QA: Excel HTTP 200, magic PK, 8.919 byte; PDF HTTP 200, magic %PDF, 10.265 byte. Không lấy phông/tài nguyên từ thư mục dự án gốc.
+- Rebuild current source thành công. `scripts/e2e-mobile-logout.ts` PASS ở 360 và 640 px: nút logout trong vùng nhìn thấy và ít nhất 44×44 px, POST thực tế trả 200, session cũ bị API quản lý từ chối 401, nháp admin đã lưu chứa liên hệ được xóa, trở về cổng công dân và không tràn ngang.
+- Bằng chứng: `test-results/upgrade/relocated-export-result.json`, `logout-result.json`, ảnh trước/sau logout từng độ rộng.
+
+Các kiểm chứng này local với fixture riêng. Bằng chứng production sau bản sửa do điều phối thực hiện riêng; không coi kết quả local là chứng minh deployment.
+
+## Kiểm chứng sao chép Unicode PDF
+
+Kiểm chứng sâu sau render phát hiện phông Noto cũ có thể nhìn đúng nhưng trích xuất sai dấu và ligature. Kết quả render/readable trước đó không đủ chứng minh nội dung sao chép chính xác.
+
+Bản xuất candidate dùng Liberation Sans được QA tạo từ snapshot tổng hợp 18 hàng, 4 trang. Poppler và PDF.js 6.4.299 đều đối chiếu chính xác UUID và bảy chuỗi literal gồm: địa danh Sơn La, cấp phép, trạng thái, `Địa`, `mặt`, `định`, `bộ lọc`, `office affine efficient difficult ffi fi fl` và toàn bộ dấu tiếng Việt dùng dấu chấm phẩy phân cách. Không normalize hoặc thay ký tự Unicode để vượt test; chỉ gộp whitespace do ngắt dòng.
+
+Đã xem PNG trang đầu và trang cuối: chữ tiếng Việt rõ, bảng nhiều trang không cắt dòng/cột, footer UUID và số trang đọc được. Bằng chứng: `unicode-copy-result.json`, `unicode-copy.pdf`, `unicode-poppler.txt`, `unicode-pdfjs.txt`, `unicode-first.png`, `unicode-last.png` tại `test-results/upgrade`.
+
+Runner tái lập: `scripts/qa-pdf-unicode.ts`; biến `QA_PDFJS_MODULE` trỏ module PDF.js trong thư mục công cụ QA riêng. Không sửa dependencies production để chạy kiểm chứng này. Đây là kiểm chứng exporter source candidate; điều phối/backend xác nhận lại bundle và production sau khi build/deploy phông mới.

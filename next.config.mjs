@@ -6,8 +6,8 @@ const config = (phase) => ({
   serverExternalPackages: ['node:sqlite', 'pdfkit'],
   outputFileTracingIncludes: {
     '/api/analytics/export': [
-      './assets/fonts/NotoSans.ttf',
-      './assets/fonts/OFL.txt',
+      './assets/fonts/LiberationSans-Regular.ttf',
+      './assets/fonts/LiberationSans-OFL.txt',
       './node_modules/pdfkit/package.json',
       './node_modules/pdfkit/js/**/*',
       './node_modules/pdfkit/lib/**/*'
