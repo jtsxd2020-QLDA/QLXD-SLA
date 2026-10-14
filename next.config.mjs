@@ -1,7 +1,18 @@
 const config = (phase) => ({
   distDir: phase === 'phase-development-server' ? '.next-dev' : '.next',
   poweredByHeader: false,
-  serverExternalPackages: ['node:sqlite'],
+  // PDFKit uses createRequire(import.meta.url) for standard font modules. Keep it
+  // external so Vercel resolves runtime package paths instead of build-machine URLs.
+  serverExternalPackages: ['node:sqlite', 'pdfkit'],
+  outputFileTracingIncludes: {
+    '/api/analytics/export': [
+      './assets/fonts/NotoSans.ttf',
+      './assets/fonts/OFL.txt',
+      './node_modules/pdfkit/package.json',
+      './node_modules/pdfkit/js/**/*',
+      './node_modules/pdfkit/lib/**/*'
+    ]
+  },
   async headers() {
     return [{ source: '/:path*', headers: [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
