@@ -13,3 +13,13 @@ Không thay đổi types/API contract đơn phương. Dùng SQL tham số hóa, 
 Toàn bộ payload nghiệp vụ SQLite mã hóa AES-GCM version1; không có fallback plaintext. Khóa trùng GPXD là hash số/cơ quan/năm. Không tự sinh secret.key khi SQLite đã tồn tại mà thiếu khóa. `TTXD_DATA_DIR` cho kiểm thử riêng; cổng API bảo vệ cố định 3100. Nguồn geo bản gốc giữ ở geodata/, hình học đầy đủ đã chuẩn hóa dùng kiểm tra server, public/data bản đơn giản hóa dùng hiển thị/gợi ý. Phải giữ ghi chú sửa hình học xã Mường Bám và trạng thái tham khảo.
 
 Kiểm tra: typecheck, lint, unit/API security, build, trình duyệt thao tác GPXD và phản ánh, tải lại còn dữ liệu; mobile và sơ đồ ranh giới. Sau sửa lỗi chạy lại các kiểm tra liên quan. Báo cáo đúng phạm vi local và giới hạn.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
