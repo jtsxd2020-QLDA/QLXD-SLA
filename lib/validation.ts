@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApiError } from './security';
 import { resolveCommune } from './geo-server';
-import type { PermitInput, ReportInput } from './types';
+import type { PermitInput, ReportInput,InspectionInput,StatusInput } from './types';
 const text=(max:number,min=1)=>z.string().trim().min(min,'Vui lòng nhập thông tin.').max(max,'Nội dung quá dài.').refine(s=>Array.from(s).every(c=>c.charCodeAt(0)>=32||[9,10,13].includes(c.charCodeAt(0))),'Nội dung chứa ký tự không hợp lệ.');
 const location={address:text(500),communeCode:text(20),lat:z.number().finite().min(-90).max(90),lng:z.number().finite().min(-180).max(180)};
 const date=text(10).regex(/^\d{4}-\d{2}-\d{2}$/,'Ngày không hợp lệ.').refine(v=>{const d=new Date(v+'T00:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===v&&v>='1900-01-01'&&v<=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});},'Ngày cấp phải có thật và không ở tương lai.');
@@ -15,3 +15,7 @@ function parse<T>(schema:z.ZodType<T>,input:unknown):T {
 }
 export const validatePermit=(input:unknown):PermitInput=>parse(permitSchema,input);
 export const validateReport=(input:unknown):ReportInput=>parse(reportSchema,input);
+
+export const inspectionSchema=z.object({...location,permitId:z.string().uuid().optional(),reportId:z.string().uuid().optional(),siteKey:text(100),inspectionDate:date,inspector:text(200),result:z.enum(['unverified','compliant','wrong_permit','no_permit_presented']),verified:z.boolean(),basis:text(3000,0),notes:text(3000,0)}).strict().superRefine((v,c)=>{if(v.verified&&(v.result==='unverified'||v.basis.length<10))c.addIssue({code:'custom',path:['basis'],message:'Kết quả xác minh cần căn cứ ít nhất 10 ký tự.'});if(!v.verified&&v.result!=='unverified')c.addIssue({code:'custom',path:['result'],message:'Chưa xác minh chỉ được ghi chưa đủ cơ sở.'});if((v.result==='compliant'||v.result==='wrong_permit')&&!v.permitId)c.addIssue({code:'custom',path:['permitId'],message:'Cần liên kết GPXD để so sánh nội dung giấy phép.'});});
+export const validateInspection=(input:unknown):InspectionInput=>parse(inspectionSchema,input);
+export function validateStatus(input:unknown):StatusInput{const result=z.object({id:z.string().uuid(),version:z.number().int().positive(),status:z.enum(['received','processing','resolved']),result:text(5000,0),reason:text(3000,0)}).strict().safeParse(input);if(!result.success)throw new ApiError(422,'Thông tin cập nhật trạng thái không hợp lệ.');return result.data;}

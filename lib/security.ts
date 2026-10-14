@@ -1,3 +1,4 @@
+import {WorkflowError} from './workflow';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { findAdminSession,cloudEnabled,consumeCloudRateLimit } from './persistence';
 export class ApiError extends Error { constructor(public status:number,message:string,public fields?:Record<string,string>) {super(message);} }
@@ -49,6 +50,7 @@ export async function readJson(request:Request):Promise<unknown> {
 }
 export function json(data:unknown,status=200,headers?:HeadersInit) {return Response.json({data},{status,headers:{'Cache-Control':'no-store',...headers}});}
 export function errorResponse(error:unknown) {
+  if(error instanceof WorkflowError)return Response.json({error:error.message},{status:error.status,headers:{'Cache-Control':'no-store'}});
   if(error instanceof ApiError) return Response.json({error:error.message,...(error.fields?{fields:error.fields}:{})},{status:error.status,headers:{'Cache-Control':'no-store'}});
   if(error instanceof Error && (error.message.includes('UNIQUE constraint failed: permits.duplicate_key')||error.message==='TTXD_DUPLICATE_PERMIT')) return Response.json({error:'Số giấy phép đã tồn tại trong cùng năm và cơ quan cấp.'},{status:409,headers:{'Cache-Control':'no-store'}});
   return Response.json({error:'Không thể xử lý yêu cầu. Vui lòng thử lại.'},{status:500,headers:{'Cache-Control':'no-store'}});

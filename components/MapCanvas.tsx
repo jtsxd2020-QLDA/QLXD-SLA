@@ -1,19 +1,26 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Layers3, X } from 'lucide-react';
+import { Layers3, X, LocateFixed, Maximize2, Minimize2, MapPin } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as LibreMap, Marker, GeoJSONSource } from 'maplibre-gl';
-import { getCommuneBounds, setDisplayBoundaries } from '@/lib/geo';
+import { getCommuneBounds, setDisplayBoundaries, resolveCommune } from '@/lib/geo';
 import type { BoundaryCollection } from '@/lib/geometry';
+import communes from '@/lib/communes.json';
 import type { MapRecord, Position } from '@/lib/types';
 import { BASEMAPS, GOOGLE_MAPS_KEY, GOOGLE_HYBRID_SOURCE, REFERENCE_SOURCES, googleCopyright, resolveBasemap, type BasemapId } from '@/lib/basemaps';
 
 type Props = {
   records: MapRecord[]; selectedCommune: string; onPick: (point: Position) => void;
-  onSelect: (record: MapRecord) => void; picked: Position | null; selectedRecordId?: string;
+  onSelect: (record: MapRecord) => void; picked: Position | null; selectedRecordId?: string; onCommuneNavigate?: (code:string)=>void;
 };
 
-export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId }: Props) {
+export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate }: Props) {
+  const [candidate,setCandidate]=useState<{position:Position;accuracy?:number}|null>(null);
+  const [locating,setLocating]=useState(false);
+  const [locationMessage,setLocationMessage]=useState('');
+  const [expanded,setExpanded]=useState(false);
+  const [positionToolsOpen,setPositionToolsOpen]=useState(false);
+  const gpsRequest=useRef(0);
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
   const handlers = useRef({ onPick, onSelect });
@@ -40,6 +47,16 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   const referenceTiles = useRef(new Set<string>());
   const [referenceUnavailable, setReferenceUnavailable] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  useEffect(()=>()=>{gpsRequest.current++;},[]);
+  useEffect(()=>{if(!expanded)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous;};},[expanded]);
+  useEffect(()=>{const close=(event:KeyboardEvent)=>{if(event.key!=='Escape'||document.querySelector('dialog[open]'))return;if(candidate||expanded||positionToolsOpen){event.preventDefault();event.stopImmediatePropagation();gpsRequest.current++;setLocating(false);setCandidate(null);setExpanded(false);setPositionToolsOpen(false);setLocationMessage('');}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[candidate,expanded,positionToolsOpen]);
+  function locate(){
+    if(!navigator.geolocation){setLocationMessage('Thiết bị chưa hỗ trợ định vị. Hãy chọn điểm trên bản đồ.');return;}
+    const request=++gpsRequest.current;setLocating(true);setLocationMessage('');
+    navigator.geolocation.getCurrentPosition(result=>{if(request!==gpsRequest.current)return;setLocating(false);const position={lat:result.coords.latitude,lng:result.coords.longitude};setCandidate({position,accuracy:result.coords.accuracy});map.current?.flyTo({center:[position.lng,position.lat],zoom:15});},error=>{if(request!==gpsRequest.current)return;setLocating(false);setLocationMessage(error.code===1?'Bạn chưa cho phép định vị. Có thể chọn vị trí bằng tay.':error.code===3?'Định vị mất quá nhiều thời gian. Hãy thử lại hoặc chọn điểm.':'Chưa xác định được vị trí thiết bị. Hãy chọn điểm trên bản đồ.');},{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+  }
+  function coordinate(event:React.FormEvent<HTMLFormElement>){event.preventDefault();gpsRequest.current++;setLocating(false);const values=new FormData(event.currentTarget);const lat=Number(String(values.get('lat')).trim()),lng=Number(String(values.get('lng')).trim());if(!String(values.get('lat')).trim()||!String(values.get('lng')).trim()||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){setLocationMessage('Tọa độ không hợp lệ. Vĩ độ từ -90 đến 90, kinh độ từ -180 đến 180.');return;}setCandidate({position:{lat,lng}});setLocationMessage('');setPositionToolsOpen(false);map.current?.flyTo({center:[lng,lat],zoom:15});}
+  const candidateCommune=candidate?resolveCommune(candidate.position):null;
   useEffect(() => { handlers.current = { onPick, onSelect }; }, [onPick, onSelect]);
   useEffect(() => {
     const dismissNotice = (event: KeyboardEvent) => {
@@ -101,7 +118,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
         hasRendered = true; setRendered(true);
       }
     });
-    instance.on('click', (event) => handlers.current.onPick({ lat: event.lngLat.lat, lng: event.lngLat.lng }));
+    instance.on('click', (event) => {gpsRequest.current++;setLocating(false);setLocationMessage('');setCandidate({position:{lat:event.lngLat.lat,lng:event.lngLat.lng}});});
     instance.on('load', async () => {
       try {
         const response = await fetch('/data/sonla-communes.geojson', { signal: controller.signal });
@@ -218,13 +235,14 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     const instance = map.current;
     if (!instance || !ready) return;
     pickMarker.current?.remove();
-    if (picked) {
-      pickMarker.current = new maplibregl.Marker({ color: '#2563eb', draggable: true }).setLngLat([picked.lng, picked.lat]).addTo(instance);
+    const preview=candidate?.position||picked;
+    if (preview) {
+      pickMarker.current = new maplibregl.Marker({ color: '#2563eb', draggable: true }).setLngLat([preview.lng, preview.lat]).addTo(instance);
       pickMarker.current.getElement().setAttribute('data-testid', 'map-picked-marker');
-      pickMarker.current.on('dragend', () => { const p = pickMarker.current?.getLngLat(); if (p) handlers.current.onPick({ lng: p.lng, lat: p.lat }); });
+      pickMarker.current.on('dragend', () => { const p = pickMarker.current?.getLngLat(); if (p) setCandidate({position:{lng:p.lng,lat:p.lat}}); });
     }
     return () => { pickMarker.current?.remove(); pickMarker.current = null; };
-  }, [picked, ready]);
+  }, [picked, candidate, ready]);
 
   useEffect(() => {
     const instance = map.current;
@@ -245,7 +263,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     if (record && map.current && ready) map.current.flyTo({ center: [record.lng, record.lat], zoom: Math.max(map.current.getZoom(), 13), duration: 550 });
   }, [selectedRecordId, records, ready]);
 
-  return <div className="map-canvas-shell" style={{ position: 'relative', width: '100%', minHeight: 360 }}>
+  return <div className={`map-canvas-shell${expanded?' map-expanded':''}`} style={{ position: 'relative', width: '100%', minHeight: 360 }}>
     <div ref={container} data-testid="map-canvas" data-basemap={activeBase} data-basemap-loaded={baseLoaded ? 'true' : 'false'} data-reference-visible={referencesVisible && activeBase === 'satellite' ? 'true' : 'false'} data-reference-loaded={referencesLoaded ? 'true' : 'false'} data-boundaries-visible={boundariesVisible ? 'true' : 'false'} data-boundaries-rendered={rendered ? 'true' : 'false'} role="region" aria-label="Bản đồ trật tự xây dựng tỉnh Sơn La" style={{ position: 'absolute', inset: 0 }} />
     <div ref={tools} className="map-tools" aria-label="Công cụ bản đồ">
       <button ref={toolsToggle} type="button" className="map-tools-toggle" aria-expanded={toolsOpen} aria-controls="map-layers-panel" onClick={() => setToolsOpen((open) => !open)}><Layers3 size={17} />Lớp bản đồ</button>
@@ -261,6 +279,10 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
       {(switchingBase || baseMessage) && <p className="map-google-note" role="status">{switchingBase ? 'Đang đổi bản đồ nền…' : baseMessage}</p>}
       </div>
     </div>
+    <div className="map-quick-controls" aria-label="Chọn vị trí và màn hình"><button type="button" className="map-tools-toggle" disabled={!ready||locating} onClick={locate}><LocateFixed size={17}/>{locating?'Đang định vị…':'Vị trí của tôi'}</button><button type="button" className="map-tools-toggle" aria-label={expanded?'Thu nhỏ bản đồ':'Bản đồ toàn màn hình'} aria-pressed={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button><button type="button" className="map-tools-toggle" aria-expanded={positionToolsOpen} onClick={()=>setPositionToolsOpen(value=>!value)}><MapPin size={17}/>Tìm vị trí</button></div>
+    {positionToolsOpen&&<section className="map-position-tools"><label>Tìm xã/phường<input list="map-commune-options" placeholder="Tên hoặc mã xã/phường" onChange={event=>{const value=event.target.value.trim().toLocaleLowerCase('vi');const commune=communes.find(c=>c.code===value||c.name.toLocaleLowerCase('vi')===value);if(commune){const bounds=getCommuneBounds(commune.code);if(bounds)map.current?.fitBounds(bounds,{padding:50});onCommuneNavigate?.(commune.code);setPositionToolsOpen(false);}}}/><datalist id="map-commune-options">{communes.map(c=><option key={c.code} value={c.name}>{c.code}</option>)}</datalist></label><form className="map-position-form" onSubmit={coordinate}><label>Vĩ độ<input name="lat" type="number" step="any" placeholder="21.3" required/></label><label>Kinh độ<input name="lng" type="number" step="any" placeholder="103.9" required/></label><button className="button secondary" type="submit">Đưa đến tọa độ</button></form><button className="text-button" type="button" onClick={()=>setPositionToolsOpen(false)}>Đóng tìm vị trí</button></section>}
+    {candidate&&<section className="map-candidate-card" role="status"><strong>{candidateCommune?.name||'Điểm ngoài địa bàn hoặc sát ranh giới cần kiểm tra'}</strong><span>{candidate.position.lat.toFixed(6)}, {candidate.position.lng.toFixed(6)}</span>{candidate.accuracy!==undefined&&<small>Sai số vị trí thiết bị khoảng {Math.round(candidate.accuracy)} m. {candidate.accuracy>100?'Sai số lớn, hãy điều chỉnh ghim trước khi xác nhận.':'Hãy kiểm tra đây là vị trí công trình.'}</small>}<small>Kéo ghim để chỉnh điểm. Địa bàn gợi ý được máy chủ kiểm tra lại khi lưu.</small><div><button type="button" className="button primary" disabled={!candidateCommune} onClick={()=>{const point=candidate.position;gpsRequest.current++;setLocating(false);setCandidate(null);setExpanded(false);handlers.current.onPick(point);}}>Dùng điểm này</button><button type="button" className="button secondary" onClick={()=>{gpsRequest.current++;setLocating(false);setCandidate(null);}}>Hủy chọn điểm</button></div></section>}
+    {locationMessage&&<div className="map-source-notice" role="alert"><span>{locationMessage}</span><button type="button" className="icon-button" aria-label="Đóng thông báo vị trí" onClick={()=>setLocationMessage('')}><X size={16}/></button></div>}
     {activeBase.startsWith('google-') && <div className="map-provider-credit map-google-credit"><img src="/google-maps-logo.svg" alt="Google Maps" height={18} /><span>{copyright}</span></div>}
     {(!ready || !rendered) && !error && <div className="map-loading" style={{ position: 'absolute', top: 16, left: 16, background: 'white', padding: '10px 14px', borderRadius: 8 }}>Đang mở bản đồ…</div>}
     {!noticeDismissed && (baseUnavailable || (referenceUnavailable && referencesVisible && activeBase === 'satellite')) && <div className="map-source-notice" role="status"><span>{baseUnavailable ? 'Chưa tải được bản đồ nền. Ranh giới và hồ sơ tại máy vẫn sử dụng được.' : 'Chưa tải được tên địa danh và đường. Ảnh vệ tinh và hồ sơ vẫn sử dụng được.'}</span><button type="button" className="icon-button" aria-label="Đóng thông báo bản đồ" onClick={() => setNoticeDismissed(true)}><X size={16} /></button></div>}

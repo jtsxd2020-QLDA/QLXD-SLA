@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-13",
-  "milestone": "Cổng công dân, tài khoản quản lý và backend Supabase",
-  "status": "verified_online_initial_release",
+  "date": "2026-10-14",
+  "milestone": "Chọn vị trí, biểu mẫu điện thoại và báo cáo điều hành Excel/PDF",
+  "status": "upgrade_local_verified_cloud_backend_verified_pending_deployment",
   "applicationUrl": "https://qlxd-sla.vercel.app",
   "team": {
     "root": "Khung, bản đồ, ranh giới, tích hợp và kiểm chứng",
@@ -13,8 +13,8 @@
     "typecheck": "passed",
     "lint": "passed",
     "unitTests": {
-      "passed": 25,
-      "total": 25
+      "passed": 43,
+      "total": 43
     },
     "e2eGroups": {
       "passed": 12,
@@ -43,7 +43,23 @@
     "cloudSecurity": "anon_denied_atomic_limit_cross_process_session_private_API_CSRF_logout_verified",
     "productionSourceCommit": "9944a680b1ee9c2d2a3ca643552a4eeb0102a953",
     "supabaseProjectRef": "ghyurzhocmvxuyqyerfv",
-    "existingAdminPasswordLogin": "hash_preserved_exactly_user_password_not_known_to_agent"
+    "existingAdminPasswordLogin": "hash_preserved_exactly_user_password_not_known_to_agent",
+    "upgradeE2E": {
+      "passed": 13,
+      "total": 13
+    },
+    "upgradeCloudBackend": "new_tables_RPC_anon_denied_concurrent_idempotency_version_history_demo_source_snapshot_exports_passed",
+    "upgradeCloudRecords": {
+      "permits": 16,
+      "reports": 10,
+      "inspections": 0,
+      "demoPermits": 15,
+      "demoReports": 10,
+      "legacyUnknownPermits": 1
+    },
+    "upgradeInternetDeployment": "pending",
+    "upgradePDF": "render_and_Vietnamese_text_passed",
+    "upgradeExcel": "reopened_typed_dates_formula_strings_snapshot_verified"
   },
   "remainingForProvincialProduction": [
     "Tài khoản cá nhân, phân quyền đơn vị và địa bàn tại máy chủ/cơ sở dữ liệu",

@@ -1,0 +1,52 @@
+import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {z} from 'zod';
+import {WorkflowError} from './workflow';
+import {readAnalyticsData,saveAnalyticsSnapshot} from './persistence';
+import type {AnalyticsFilters,AnalyticsSnapshot,RecordsResponse,Inspection} from './types';
+const validDate=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>{const d=new Date(s+'T00:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===s&&s>='1900-01-01'&&s<='2200-12-31';});
+const schema=z.object({group:z.enum(['permits','reports','inspections']).default('reports'),dateFrom:validDate.default('2026-01-01'),dateTo:validDate.default('2026-12-31'),communeCode:z.string().max(20).default(''),category:z.enum(['','unlicensed','wrong_permit','safety','other']).default(''),status:z.enum(['','pending','active','received','processing','resolved']).default(''),result:z.enum(['','unverified','compliant','wrong_permit','no_permit_presented']).default(''),source:z.enum(['real','demo','unknown','all']).default('real'),dateBasis:z.enum(['issue','created']).default('issue'),inspectionMode:z.enum(['all','latest']).default('all')}).strict();
+export function validateAnalyticsFilters(input:unknown):AnalyticsFilters{const parsed=schema.safeParse(input);if(!parsed.success)throw new WorkflowError(422,'Bộ lọc báo cáo không hợp lệ.');const f=parsed.data;if(f.dateFrom>f.dateTo)throw new WorkflowError(422,'Ngày bắt đầu phải trước ngày kết thúc.');if(Number(f.dateTo.slice(0,4))-Number(f.dateFrom.slice(0,4))>10)throw new WorkflowError(422,'Mỗi báo cáo tối đa 10 năm.');if(f.group==='permits'&&(f.category||f.result||f.status&&f.status!=='active'))throw new WorkflowError(422,'Bộ lọc không áp dụng cho GPXD.');if(f.group==='reports'&&f.status==='active')throw new WorkflowError(422,'Trạng thái GPXD không áp dụng cho phản ánh.');if(f.group==='reports'&&f.result)throw new WorkflowError(422,'Kết quả kiểm tra chỉ áp dụng nhóm kiểm tra.');if(f.group==='inspections'&&f.status)throw new WorkflowError(422,'Trạng thái phản ánh không áp dụng nhóm kiểm tra.');return f;}
+export function vietnamDate(iso:string){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso));}
+const categoryLabels:Record<string,string>={unlicensed:'Xây dựng không phép (phản ánh)',wrong_permit:'Xây dựng sai phép (phản ánh)',safety:'An toàn xây dựng',other:'Khác'};
+const resultLabels:Record<string,string>={unverified:'Chưa đủ cơ sở xác minh',compliant:'Phù hợp nội dung GPXD',wrong_permit:'Sai nội dung GPXD',no_permit_presented:'Chưa xuất trình GPXD, cần xác minh'};
+const statusLabels:Record<string,string>={active:'Đã ghi nhận giấy phép',received:'Đã tiếp nhận',processing:'Đang xử lý',resolved:'Đã giải quyết'};
+const sourceLabels:Record<string,string>={real:'Thực tế',demo:'Minh họa',unknown:'Chưa xác định nguồn'};
+function communes(){const data=JSON.parse(readFileSync(join(process.cwd(),'geodata/sonla.full.geojson'),'utf8'));return data.features.map((f:{properties:{communeCode:string;name:string}})=>({code:f.properties.communeCode,name:f.properties.name}));}
+export function buildAnalyticsSnapshot(records:RecordsResponse,inspections:Inspection[],filters:AnalyticsFilters,now=new Date()):AnalyticsSnapshot{
+ const f=validateAnalyticsFilters(filters),places=communes();if(f.communeCode&&!places.some((p:{code:string})=>p.code===f.communeCode))throw new WorkflowError(422,'Địa bàn không hợp lệ.');
+ const inDate=(date:string)=>date>=f.dateFrom&&date<=f.dateTo;
+ const scope=(r:{communeCode:string;source?:string})=>(!f.communeCode||r.communeCode===f.communeCode)&&(f.source==='all'||(r.source||'unknown')===f.source);
+ const reportScope=records.reports.filter(r=>scope(r)&&(!f.category||r.category===f.category)&&(!f.status||(f.status==='pending'?r.status!=='resolved':r.status===f.status)));
+ const rows:AnalyticsSnapshot['rows']=[];const metrics:AnalyticsSnapshot['metrics']=[];const selected:{date:string;communeCode:string;breakdown:string}[]=[];
+ const add=(key:string,label:string,value:number)=>metrics.push({key,label,value});
+ let columns:AnalyticsSnapshot['columns'];
+ if(f.group==='permits'){
+  const list=records.permits.filter(r=>scope(r)&&inDate(f.dateBasis==='issue'?r.issueDate:vietnamDate(r.createdAt)));
+  columns=[{key:'id',label:'Mã hồ sơ'},{key:'permitNumber',label:'Số GPXD'},{key:'issueDate',label:'Ngày cấp'},{key:'createdDate',label:'Ngày nhập'},{key:'commune',label:'Địa bàn'},{key:'status',label:'Trạng thái'},{key:'source',label:'Nguồn'}];
+  for(const r of list){rows.push({id:r.id,permitNumber:r.permitNumber,issueDate:r.issueDate,createdDate:vietnamDate(r.createdAt),commune:places.find((p:{code:string})=>p.code===r.communeCode)?.name||r.communeCode,status:statusLabels.active,source:sourceLabels[r.source||'unknown']});selected.push({date:f.dateBasis==='issue'?r.issueDate:vietnamDate(r.createdAt),communeCode:r.communeCode,breakdown:'active'});}
+  add('total',f.dateBasis==='issue'?'GPXD cấp trong kỳ':'GPXD nhập trong kỳ',list.length);
+ }else if(f.group==='reports'){
+  const list=reportScope.filter(r=>inDate(vietnamDate(r.createdAt)));
+  columns=[{key:'id',label:'Mã hồ sơ'},{key:'publicCode',label:'Mã tiếp nhận'},{key:'receivedDate',label:'Ngày tiếp nhận'},{key:'commune',label:'Địa bàn'},{key:'category',label:'Loại phản ánh'},{key:'status',label:'Trạng thái hiện tại'},{key:'ageDays',label:'Số ngày từ tiếp nhận'},{key:'source',label:'Nguồn'}];
+  for(const r of list){rows.push({id:r.id,publicCode:r.publicCode,receivedDate:vietnamDate(r.createdAt),commune:places.find((p:{code:string})=>p.code===r.communeCode)?.name||r.communeCode,category:categoryLabels[r.category],status:statusLabels[r.status],ageDays:Math.max(0,Math.floor((Date.parse(vietnamDate(now.toISOString()))-Date.parse(vietnamDate(r.createdAt)))/86400000)),source:sourceLabels[r.source||'unknown']});selected.push({date:vietnamDate(r.createdAt),communeCode:r.communeCode,breakdown:r.category});}
+  add('total','Phản ánh tiếp nhận trong kỳ',list.length);for(const status of ['received','processing','resolved'])add(status,statusLabels[status]+' (trạng thái hiện tại)',list.filter(r=>r.status===status).length);
+  add('currentPending','Chưa hoàn tất (lọc kỳ tiếp nhận, trạng thái hiện tại)',list.filter(r=>r.status!=='resolved').length);
+  const events=reportScope.flatMap(r=>(r.history||[]).filter(e=>e.to==='resolved'&&inDate(vietnamDate(e.at))).map(e=>({id:r.id,event:e})));
+  add('resolutionEvents','Lượt hoàn tất trong kỳ (theo ngày sự kiện)',events.length);add('resolvedUnique','Hồ sơ có sự kiện hoàn tất trong kỳ',new Set(events.map(e=>e.id)).size);
+ }else{
+  let list=inspections.filter(r=>scope(r)&&r.inspectionDate<=f.dateTo&&(!f.category||records.reports.some(a=>a.id===r.reportId&&a.category===f.category)));
+  if(f.inspectionMode==='latest'){const latest=new Map<string,Inspection>();for(const r of list){const key=r.permitId||r.communeCode+':'+r.siteKey;const old=latest.get(key);if(!old||r.inspectionDate>old.inspectionDate||r.inspectionDate===old.inspectionDate&&r.createdAt>old.createdAt)latest.set(key,r);}list=[...latest.values()];}
+  list=list.filter(r=>inDate(r.inspectionDate)&&(!f.result||(r.verified?r.result:'unverified')===f.result));
+  columns=[{key:'id',label:'Mã kiểm tra'},{key:'siteKey',label:'Mã công trình'},{key:'inspectionDate',label:'Ngày kiểm tra'},{key:'commune',label:'Địa bàn'},{key:'result',label:'Kết quả'},{key:'verified',label:'Đã xác minh'},{key:'source',label:'Nguồn'}];
+  for(const r of list){const result=r.verified?r.result:'unverified';rows.push({id:r.id,siteKey:r.permitId||r.siteKey,inspectionDate:r.inspectionDate,commune:places.find((p:{code:string})=>p.code===r.communeCode)?.name||r.communeCode,result:resultLabels[result],verified:r.verified,source:sourceLabels[r.source||'unknown']});selected.push({date:r.inspectionDate,communeCode:r.communeCode,breakdown:result});}
+  add('total',f.inspectionMode==='all'?'Lượt kiểm tra trong kỳ':'Kết quả gần nhất đến cuối kỳ (có lọc ngày)',list.length);add('sites','Công trình được kiểm tra',new Set(list.map(r=>r.permitId||r.communeCode+':'+r.siteKey)).size);
+ }
+ if(rows.length>10000)throw new WorkflowError(413,'Báo cáo vượt giới hạn 10000 dòng.');
+ const months=new Map<string,number>();let cursor=f.dateFrom.slice(0,7);while(cursor<=f.dateTo.slice(0,7)){months.set(cursor,0);const[y,m]=cursor.split('-').map(Number);cursor=new Date(Date.UTC(y,m,1)).toISOString().slice(0,7);}for(const r of selected)months.set(r.date.slice(0,7),(months.get(r.date.slice(0,7))||0)+1);
+ const counts=new Map<string,number>();for(const r of selected)counts.set(r.breakdown,(counts.get(r.breakdown)||0)+1);
+ return{id:randomUUID(),generatedAt:now.toISOString(),filters:f,metrics,monthly:[...months].map(([month,count])=>({month,count})),communes:places.filter((p:{code:string})=>!f.communeCode||p.code===f.communeCode).map((p:{code:string;name:string})=>({...p,count:selected.filter(r=>r.communeCode===p.code).length})),breakdown:[...counts].map(([key,count])=>({key,label:(f.group==='inspections'?resultLabels:f.group==='reports'?categoryLabels:statusLabels)[key]||key,count})),columns,rows,total:rows.length,notes:['Ranh giới tham khảo. Nguồn chưa xác định không tự tính là thực tế.','Trạng thái hiện tại không dùng để suy ra tồn cuối kỳ lịch sử. Số ngày từ tiếp nhận không phải số ngày quá hạn.','Loại phản ánh do người gửi khai báo; chỉ kết quả kiểm tra xác minh được mới vào nhóm kết luận.','Sự kiện hoàn tất xét ngày sự kiện, có thể thuộc hồ sơ tiếp nhận trước kỳ.']};
+}
+export async function createAnalyticsSnapshot(filters:AnalyticsFilters){const{records,inspections}=await readAnalyticsData();const snapshot=buildAnalyticsSnapshot(records,inspections,filters);await saveAnalyticsSnapshot(snapshot);return snapshot;}
+export {getAnalyticsSnapshot} from './persistence';

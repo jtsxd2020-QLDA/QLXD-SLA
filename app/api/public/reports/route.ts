@@ -1,3 +1,4 @@
+import {idempotency} from '@/lib/workflow';
 import { checkSameOriginRequest,errorResponse,json,readJson,persistentRateLimit,clientIP,ApiError } from '@/lib/security';
 import { insertReport } from '@/lib/persistence';
 import { validateReport } from '@/lib/validation';
@@ -12,7 +13,7 @@ export async function POST(request:Request) {
     if(!body||typeof body!=='object'||Array.isArray(body)) throw new ApiError(400,'Nội dung không hợp lệ.');
     const {honeypot,...payload}=body as Record<string,unknown>;
     if(typeof honeypot==='string'&&honeypot.trim()) throw new ApiError(400,'Không thể tiếp nhận phản ánh.');
-    const record=await insertReport(validateReport(payload));
+    const input=validateReport(payload);const record=await insertReport(input,idempotency(request,input,'public-report'));
     return json({publicCode:record.publicCode,receivedAt:record.createdAt},201);
   }catch(error){return errorResponse(error);}
 }

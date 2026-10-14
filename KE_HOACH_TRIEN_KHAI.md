@@ -177,3 +177,7 @@ Các đầu vào chưa có được ghi “chưa xác minh”; không tự bịa
 Bắt đầu bằng chạy và kiểm chứng `ttxd-sonla`, chốt giao diện kế thừa, khởi tạo bản riêng trong thư mục này rồi thiết kế địa bàn/phân quyền. Sau đó triển khai một luồng hoàn chỉnh ở 2–3 xã/phường: giấy phép → bản đồ → phản ánh → kiểm tra → báo cáo. Khi luồng và quyền đạt yêu cầu, nhập đủ ranh giới và mở rộng toàn tỉnh.
 
 Những phần nâng cao như cấp phép hành chính, ký số, tích hợp dịch vụ công, lớp quy hoạch và đồng bộ ngoại tuyến đầy đủ lập thành giai đoạn bổ sung sau bản đầu.
+
+## Kế hoạch nâng cấp được thống nhất ngày 14/10/2026
+
+Chi tiết đợt cải thiện chọn vị trí, biểu mẫu điện thoại, trạng thái/số liệu và báo cáo điều hành, xuất Excel/PDF tại [kế hoạch nâng cấp trải nghiệm và báo cáo](./docs/KE_HOACH_NANG_CAP_TRAI_NGHIEM_BAO_CAO_2026-10-14.md).
