@@ -61,6 +61,12 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   const referenceTiles = useRef(new Set<string>());
   const [referenceUnavailable, setReferenceUnavailable] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [expresswayVisible, setExpresswayVisible] = useState(false);
+  const [expresswayLoaded, setExpresswayLoaded] = useState(false);
+  const [expresswayCount, setExpresswayCount] = useState(0);
+  const [expresswayMessage, setExpresswayMessage] = useState('');
+  const expresswayLoading = expresswayVisible && !expresswayLoaded && !expresswayMessage;
+  const expresswayLayerAdded = useRef(false);
   useEffect(()=>()=>{gpsRequest.current++;},[]);
   useEffect(()=>{if(!expanded)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous;};},[expanded]);
   useEffect(()=>{workflowState.current={selectionOnly,measureMode};},[selectionOnly,measureMode]);
@@ -310,6 +316,69 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   useEffect(() => {
     const instance = map.current;
     if (!instance || !ready) return;
+    const layerIds = ['expressway-casing', 'expressway-lines', 'expressway-gpmb', 'expressway-chainage-points', 'expressway-chainage-labels'];
+    if (expresswayLayerAdded.current) {
+      for (const id of layerIds) instance.setLayoutProperty(id, 'visibility', expresswayVisible ? 'visible' : 'none');
+      return;
+    }
+    if (!expresswayVisible) return;
+    const controller = new AbortController();
+    let alive = true;
+    void fetch('/data/tuyen-cao-toc-12.geojson', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Không tải được dữ liệu tuyến cao tốc từ KMZ 12.');
+        return await response.json() as GeoJSON.FeatureCollection;
+      })
+      .then((data) => {
+        if (!alive) return;
+        instance.addSource('expressway-route', { type: 'geojson', data });
+        const allLines: maplibregl.FilterSpecification = ['==', ['get', 'featureType'], 'line'];
+        const lineFilter: maplibregl.FilterSpecification = ['all', allLines, ['!=', ['get', 'description'], 'Ranh GPMB']];
+        const gpmbFilter: maplibregl.FilterSpecification = ['all', allLines, ['==', ['get', 'description'], 'Ranh GPMB']];
+        const pointFilter: maplibregl.FilterSpecification = ['==', ['get', 'featureType'], 'point'];
+        instance.addLayer({
+          id: 'expressway-casing', type: 'line', source: 'expressway-route', filter: allLines,
+          layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#172554', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2.2, 13, 6], 'line-opacity': 0.9 },
+        }, 'selection-fill');
+        instance.addLayer({
+          id: 'expressway-lines', type: 'line', source: 'expressway-route', filter: lineFilter,
+          layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': ['match', ['get', 'description'], 'C-ROAD', '#fb923c', '#fef08a'],
+            'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.1, 13, 3.2],
+            'line-opacity': 0.95,
+          },
+        }, 'selection-fill');
+        instance.addLayer({
+          id: 'expressway-gpmb', type: 'line', source: 'expressway-route', filter: gpmbFilter,
+          layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#c084fc', 'line-width': 2.4, 'line-opacity': 0.95, 'line-dasharray': [2, 1.5] },
+        }, 'selection-fill');
+        instance.addLayer({
+          id: 'expressway-chainage-points', type: 'circle', source: 'expressway-route', filter: pointFilter,
+          minzoom: 9, layout: { visibility: 'visible' },
+          paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 15, 5], 'circle-color': '#fff', 'circle-stroke-color': '#7c3aed', 'circle-stroke-width': 1.5 },
+        }, 'selection-fill');
+        instance.addLayer({
+          id: 'expressway-chainage-labels', type: 'symbol', source: 'expressway-route', filter: pointFilter,
+          minzoom: 11, layout: { visibility: 'visible', 'text-field': ['get', 'name'], 'text-size': 11, 'text-offset': [0, 1.15], 'text-anchor': 'top', 'text-optional': true, 'text-allow-overlap': false },
+          paint: { 'text-color': '#fff', 'text-halo-color': '#172554', 'text-halo-width': 2 },
+        }, 'selection-fill');
+        expresswayLayerAdded.current = true;
+        setExpresswayLoaded(true);
+        setExpresswayCount(data.features.length);
+        setExpresswayMessage(`Đã nạp ${data.features.length.toLocaleString('vi-VN')} đối tượng từ KMZ 12. Tọa độ và ranh GPMB cần đối chiếu hồ sơ trước khi sử dụng pháp lý.`);
+      })
+      .catch((reason: unknown) => {
+        if (alive && !controller.signal.aborted) setExpresswayMessage(reason instanceof Error ? reason.message : 'Không tải được dữ liệu tuyến.');
+      });
+    return () => { alive = false; controller.abort(); };
+  }, [expresswayVisible, ready]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !ready) return;
     markers.current.forEach((marker) => marker.remove());
     markers.current = records.map((record) => {
       const button = document.createElement('button');
@@ -358,7 +427,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   }, [selectedRecordId, records, ready]);
 
   return <div className={`map-canvas-shell${expanded?' map-expanded':''}`} style={{ position: 'relative', width: '100%', minHeight: 360 }}>
-    <div ref={container} data-testid="map-canvas" data-basemap={activeBase} data-basemap-loaded={baseLoaded ? 'true' : 'false'} data-reference-visible={referencesVisible && activeBase === 'satellite' ? 'true' : 'false'} data-reference-loaded={referencesLoaded ? 'true' : 'false'} data-boundaries-visible={boundariesVisible ? 'true' : 'false'} data-boundaries-rendered={rendered ? 'true' : 'false'} role="region" aria-label="Bản đồ trật tự xây dựng tỉnh Sơn La" style={{ position: 'absolute', inset: 0 }} />
+    <div ref={container} data-testid="map-canvas" data-basemap={activeBase} data-basemap-loaded={baseLoaded ? 'true' : 'false'} data-reference-visible={referencesVisible && activeBase === 'satellite' ? 'true' : 'false'} data-reference-loaded={referencesLoaded ? 'true' : 'false'} data-boundaries-visible={boundariesVisible ? 'true' : 'false'} data-boundaries-rendered={rendered ? 'true' : 'false'} data-expressway-visible={expresswayVisible ? 'true' : 'false'} data-expressway-loaded={expresswayLoaded ? 'true' : 'false'} data-expressway-count={expresswayCount} role="region" aria-label="Bản đồ trật tự xây dựng tỉnh Sơn La" style={{ position: 'absolute', inset: 0 }} />
     <div ref={tools} className="map-tools" aria-label="Công cụ bản đồ">
       <button ref={toolsToggle} type="button" className="map-tools-toggle" aria-expanded={toolsOpen} aria-controls="map-layers-panel" onClick={() => setToolsOpen((open) => !open)}><Layers3 size={17} />Lớp bản đồ</button>
       <div id="map-layers-panel" className="map-tools-popover" hidden={!toolsOpen}>
@@ -368,6 +437,8 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
       </select></label>
       <label><input type="checkbox" checked={referencesVisible} disabled={!ready || activeBase !== 'satellite'} onChange={(event) => { setReferencesVisible(event.target.checked); setNoticeDismissed(false); }} />Tên địa danh và đường</label>
       <label><input type="checkbox" checked={boundariesVisible} disabled={!ready} onChange={(event) => setBoundariesVisible(event.target.checked)} />Ranh giới xã, phường</label>
+      <label><input type="checkbox" checked={expresswayVisible} disabled={!ready} onChange={(event) => { setExpresswayMessage(''); setExpresswayVisible(event.target.checked); }} />{expresswayLoading ? 'Đang tải tuyến cao tốc…' : 'Tuyến cao tốc và mốc lý trình (KMZ 12)'}</label>
+      {expresswayMessage && <p className="map-google-note" role={expresswayLoaded ? 'status' : 'alert'}>{expresswayMessage}</p>}
       <button type="button" className="button" disabled={!ready} onClick={() => map.current?.fitBounds([[103.21, 20.54], [105.08, 22.04]], { padding: 36, duration: 450 })}>Về toàn tỉnh</button>
       {!GOOGLE_MAPS_KEY && <p className="map-google-note">Nền Google Hybrid hiển thị sẵn tên đường và địa điểm.</p>}
       {(switchingBase || baseMessage) && <p className="map-google-note" role="status">{switchingBase ? 'Đang đổi bản đồ nền…' : baseMessage}</p>}
