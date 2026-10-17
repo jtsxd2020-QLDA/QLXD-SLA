@@ -102,6 +102,40 @@
 .map-canvas-shell:has(.map-google-credit) .map-measure-panel{top:62px;bottom:auto}
 @media(max-width:760px){.map-draw-tools{left:auto;right:8px;top:111px;width:min(265px,calc(100% - 20px))}.map-measure-panel{left:auto;right:8px;top:111px;bottom:auto;width:min(300px,calc(100% - 16px));max-height:50%}.map-canvas-shell:has(.map-google-credit) .map-measure-panel{top:111px;bottom:auto}.permit-progress-control form{grid-template-columns:1fr}.permit-progress-control form .button{width:100%}.map-shortcuts-note{font-size:9px}}
 
+/* Pin marker: align its pointed end with the exact map coordinate and keep the house glyph upright. */
+.map-record-marker{width:38px;height:42px;display:block;padding:0;overflow:visible;border:0;border-radius:0;background:transparent!important;box-shadow:none!important;font-size:0}
+.map-record-marker .map-marker-pin{position:absolute;left:50%;top:7px;width:29px;height:29px;display:grid;place-items:center;border:2px solid #fff;border-radius:50% 50% 50% 0;transform:translateX(-50%) rotate(-45deg);color:#fff;box-shadow:0 2px 9px #18304b55}
+.map-record-marker .map-marker-pin svg{width:17px;height:17px;transform:rotate(45deg)}
+.map-record-marker.permit[data-construction-status="uninspected"] .map-marker-pin{background:#c74747}
+.map-record-marker.permit[data-construction-status="under_construction"] .map-marker-pin{background:#d98718}
+.map-record-marker.permit[data-construction-status="completed"] .map-marker-pin{background:#16835d}
+.map-record-marker.report[data-status="unresolved"] .map-marker-pin{background:#d45a18}
+.map-record-marker.report[data-status="resolved"] .map-marker-pin{background:#16835d}
+.map-record-marker.selected .map-marker-pin{box-shadow:0 0 0 3px #ffffffd9,0 0 0 5px #18304b,0 3px 10px #18304b66}
+.lifecycle-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 20px}
+.lifecycle-summary article{padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:#f8faff}
+.lifecycle-summary span{display:block;color:var(--muted);font-size:11px}
+.lifecycle-summary strong{display:block;margin-top:7px;font-size:24px}
+.lifecycle-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.lifecycle-tabs{display:flex;gap:6px}
+.lifecycle-tabs button{padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:white;color:var(--muted);font-size:11px}
+.lifecycle-tabs button.active{border-color:#9ab7df;background:#edf4ff;color:#245ca6;font-weight:bold}
+.lifecycle-search{display:flex;align-items:center;gap:8px;min-width:min(310px,100%);height:38px;padding:0 11px;border:1px solid var(--line);border-radius:7px;color:#8796aa}
+.lifecycle-search input{width:100%;height:34px;border:0;background:transparent;outline:none;font-size:12px}
+.lifecycle-bulk{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px;padding:14px;border:1px solid #f0d9ba;border-radius:8px;background:#fffaf3}
+.lifecycle-bulk strong{font-size:12px;color:#734a20}
+.lifecycle-bulk p{margin:5px 0 0;color:#826b51;font-size:10px;line-height:1.6}
+.button.danger{background:#fff;color:#a63f32;border-color:#e8c5c0}
+.button.danger:hover{background:#fff3f1}
+.danger-text{color:#a63f32}
+.lifecycle-flag{color:#98621a}
+.lifecycle-table-wrap{max-height:min(600px,70dvh)}
+.lifecycle-table td{vertical-align:top}
+.lifecycle-table td:first-child{min-width:150px}
+.lifecycle-table td:nth-child(3){min-width:210px;color:var(--ink)}
+.lifecycle-table td:last-child{white-space:nowrap}
+@media(max-width:760px){.lifecycle-summary{grid-template-columns:1fr 1fr}.lifecycle-summary article:last-child{grid-column:1/-1}.lifecycle-bulk{align-items:stretch;flex-direction:column}.lifecycle-bulk .button{width:100%;white-space:normal}.lifecycle-toolbar{align-items:stretch}.lifecycle-tabs{width:100%}.lifecycle-tabs button{flex:1}.lifecycle-search{width:100%;min-width:0}}
+
 /* Keep long forms and data tables scrollable on short screens and touch devices. */
 .wizard-dialog>form{min-height:0}
 .wizard-dialog>form>.dialog-body{flex:1 1 0%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}

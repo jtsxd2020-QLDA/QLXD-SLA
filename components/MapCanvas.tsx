@@ -409,9 +409,9 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
       }else{
         const bubble=document.createElementNS(svgNamespace,'path');bubble.setAttribute('d','M21 11.5a8.5 8.5 0 0 1-12.8 7.3L3 21l1.6-4.8A8.5 8.5 0 1 1 21 11.5zM8 11.5h.01M12 11.5h.01M16 11.5h.01');icon.append(bubble);
       }
-      button.append(icon);
+      const pin=document.createElement('span');pin.className='map-marker-pin';pin.append(icon);button.append(pin);
       button.addEventListener('click', (event) => { event.stopPropagation(); handlers.current.onSelect(record); });
-      return new maplibregl.Marker({ element: button, anchor: 'center' }).setLngLat([record.lng, record.lat]).addTo(instance);
+      return new maplibregl.Marker({ element: button, anchor: 'bottom' }).setLngLat([record.lng, record.lat]).addTo(instance);
     });
     return () => { markers.current.forEach((marker) => marker.remove()); };
   }, [records, ready, selectedRecordId]);

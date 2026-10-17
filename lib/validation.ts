@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApiError } from './security';
 import { resolveCommune } from './geo-server';
-import type { PermitInput, ReportInput,InspectionInput,StatusInput,PermitProgressInput } from './types';
+import type { PermitInput, ReportInput,InspectionInput,StatusInput,PermitProgressInput,RecordLifecycleInput } from './types';
 const text=(max:number,min=1)=>z.string().trim().min(min,'Vui lòng nhập thông tin.').max(max,'Nội dung quá dài.').refine(s=>Array.from(s).every(c=>c.charCodeAt(0)>=32||[9,10,13].includes(c.charCodeAt(0))),'Nội dung chứa ký tự không hợp lệ.');
 const location={address:text(500),communeCode:text(20),lat:z.number().finite().min(-90).max(90),lng:z.number().finite().min(-180).max(180)};
 const date=text(10).regex(/^\d{4}-\d{2}-\d{2}$/,'Ngày không hợp lệ.').refine(v=>{const d=new Date(v+'T00:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===v&&v>='1900-01-01'&&v<=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});},'Ngày cấp phải có thật và không ở tương lai.');
@@ -20,3 +20,5 @@ export const inspectionSchema=z.object({...location,permitId:z.string().uuid().o
 export const validateInspection=(input:unknown):InspectionInput=>parse(inspectionSchema,input);
 export function validateStatus(input:unknown):StatusInput{const result=z.object({id:z.string().uuid(),version:z.number().int().positive(),status:z.enum(['received','processing','resolved']),result:text(5000,0),reason:text(3000,0)}).strict().safeParse(input);if(!result.success)throw new ApiError(422,'Thông tin cập nhật trạng thái không hợp lệ.');return result.data;}
 export function validatePermitProgress(input:unknown):PermitProgressInput{const result=z.object({id:z.string().uuid(),version:z.number().int().positive(),constructionStatus:z.enum(['uninspected','under_construction','completed'])}).strict().safeParse(input);if(!result.success)throw new ApiError(422,'Thông tin cập nhật tình trạng công trình không hợp lệ.');return result.data;}
+export function validateRecordLifecycle(input:unknown):RecordLifecycleInput{const result=z.object({id:z.string().uuid(),version:z.number().int().positive(),kind:z.enum(['permit','report','inspection']),action:z.enum(['trash','restore'])}).strict().safeParse(input);if(!result.success)throw new ApiError(422,'Thao tác hồ sơ không hợp lệ.');return result.data;}
+export function validateSampleCleanup(input:unknown){const result=z.object({confirm:z.literal(true)}).strict().safeParse(input);if(!result.success)throw new ApiError(422,'Cần xác nhận chuyển hồ sơ có nhãn mẫu/kiểm thử vào thùng rác.');return result.data;}
