@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validatePermit,validateReport} from '../lib/validation';
+import {validatePermit,validateReport,validatePermitProgress} from '../lib/validation';
 import {resolveCommune} from '../lib/geo-server';
 import {geometryBounds,type BoundaryCollection} from '../lib/geometry';
 import {ApiError} from '../lib/security';
@@ -18,7 +18,7 @@ assert.ok(location);
 const permit={...location,permitNumber:'QA-VALID',issueDate:'2026-10-10',issuingAuthority:'QA Cơ quan',investorName:'QA Chủ đầu tư',investorPhone:'0912345678',projectName:'QA Công trình',address:'QA địa chỉ',area:100,floors:2,constructionType:'new',notes:''};
 const report={...location,title:'QA phản ánh',content:'QA nội dung phản ánh kiểm thử',category:'safety',reporterName:'',reporterPhone:'',address:'QA địa chỉ'};
 const invalid=(value:unknown,kind:'permit'|'report'='permit')=>assert.throws(()=>kind==='permit'?validatePermit(value):validateReport(value),(error:unknown)=>error instanceof ApiError&&error.status===422);
-test('valid records accept exact polygon location and legacy permits without a phone field',()=>{assert.equal(validatePermit(permit).communeCode,location?.communeCode);const legacyPermit:Record<string,unknown>={...permit};delete legacyPermit.investorPhone;assert.equal(validatePermit(legacyPermit).investorPhone,'');assert.equal(validateReport(report).reporterName,'');});
+test('valid records accept exact polygon location, legacy permits default to uninspected, and progress updates validate',()=>{assert.equal(validatePermit(permit).communeCode,location?.communeCode);assert.equal(validatePermit(permit).constructionStatus,'uninspected');const legacyPermit:Record<string,unknown>={...permit};delete legacyPermit.investorPhone;delete legacyPermit.constructionStatus;assert.equal(validatePermit(legacyPermit).investorPhone,'');assert.equal(validatePermit(legacyPermit).constructionStatus,'uninspected');assert.equal(validatePermit({...permit,constructionStatus:'completed'}).constructionStatus,'completed');assert.equal(validateReport(report).reporterName,'');assert.throws(()=>validatePermitProgress({id:'bad',version:1,constructionStatus:'completed'}));});
 test('reject permit invalid dates including impossible leap date and future',()=>{for(const issueDate of ['2026-02-30','2025-02-29','2099-01-01','10/10/2026'])invalid({...permit,issueDate});});
 test('reject invalid numerical and missing enum fields',()=>{for(const patch of [{area:0},{area:-1},{floors:1.5},{floors:201},{lat:NaN},{lng:Infinity},{constructionType:'bad'}])invalid({...permit,...patch});});
 test('reject wrong commune and outside province',()=>{

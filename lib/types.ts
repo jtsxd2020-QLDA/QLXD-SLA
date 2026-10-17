@@ -1,19 +1,21 @@
 export type Position = { lat: number; lng: number };
 export type Commune = { code: string; name: string; type: string };
+export type ConstructionStatus = 'uninspected' | 'under_construction' | 'completed';
+export type ConstructionStatusEvent = { at: string; actor: string; from: ConstructionStatus; to: ConstructionStatus };
 export type PermitInput = {
   permitNumber: string; issueDate: string; issuingAuthority: string;
   investorName: string; investorPhone?: string; projectName: string; address: string; communeCode: string;
   lat: number; lng: number; area: number; floors: number;
-  constructionType: 'new' | 'renovation'; notes: string;
+  constructionType: 'new' | 'renovation'; notes: string; constructionStatus?: ConstructionStatus;
 };
 export type ReportInput = {
   title: string; content: string; category: 'unlicensed' | 'wrong_permit' | 'safety' | 'other';
   reporterName: string; reporterPhone: string; address: string; communeCode: string;
   lat: number; lng: number;
 };
-export type Permit = PermitInput & { id: string; createdAt: string; status: 'active'; source?:DataSource; version?:number };
+export type Permit = PermitInput & { id: string; createdAt: string; status: 'active'; source?:DataSource; version?:number; progressHistory?:ConstructionStatusEvent[] };
 export type CitizenReport = ReportInput & { id: string; publicCode: string; createdAt: string; status: 'received' | 'processing' | 'resolved'; source?:DataSource; version?:number; history?:StatusEvent[]; historyStartedAt?:string; result?:string; completedAt?:string };
-export type MapRecord = { id: string; kind: 'permit' | 'report'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string };
+export type MapRecord = { id: string; kind: 'permit' | 'report'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string; constructionStatus?:ConstructionStatus };
 export type RecordsResponse = { permits: Permit[]; reports: CitizenReport[] };
 export type ApiResult<T> = { data: T } | { error: string; fields?: Record<string, string> };
 export type SessionInfo = { authenticated: boolean; mode: 'citizen'|'admin'; csrfToken?: string; email?: string };
@@ -25,6 +27,7 @@ export type InspectionResult='unverified'|'compliant'|'wrong_permit'|'no_permit_
 export type InspectionInput={permitId?:string;reportId?:string;siteKey:string;address:string;communeCode:string;lat:number;lng:number;inspectionDate:string;inspector:string;result:InspectionResult;verified:boolean;basis:string;notes:string};
 export type Inspection=InspectionInput & {id:string;createdAt:string;source:DataSource;version:number};
 export type StatusInput={id:string;version:number;status:ReportStatus;result:string;reason:string};
+export type PermitProgressInput={id:string;version:number;constructionStatus:ConstructionStatus};
 export type Idempotency={key:string;digest:string;scope:string};
 export type AnalyticsFilters={group:'permits'|'reports'|'inspections';dateFrom:string;dateTo:string;communeCode:string;category:string;status:string;result:string;source:DataSource|'all';dateBasis:'issue'|'created';inspectionMode:'all'|'latest';search:string};
 export type AnalyticsSnapshot={id:string;generatedAt:string;filters:AnalyticsFilters;metrics:{key:string;label:string;value:number}[];monthly:{month:string;count:number}[];communes:{code:string;name:string;count:number}[];breakdown:{key:string;label:string;count:number}[];columns:{key:string;label:string}[];rows:Record<string,string|number|boolean|null>[];total:number;notes:string[]};

@@ -1,9 +1,9 @@
-import {WorkflowError,statusRecord,metadata,inspectionSource} from './workflow';
+import {WorkflowError,statusRecord,permitProgressRecord,metadata,inspectionSource} from './workflow';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, chmodSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes, randomUUID, createCipheriv, createDecipheriv, createHash, timingSafeEqual, scryptSync } from 'node:crypto';
-import type { PermitInput, ReportInput, Permit, CitizenReport, Inspection, InspectionInput, StatusInput, Idempotency, AnalyticsSnapshot } from './types';
+import type { PermitInput, ReportInput, Permit, CitizenReport, Inspection, InspectionInput, StatusInput, PermitProgressInput, Idempotency, AnalyticsSnapshot } from './types';
 let database: DatabaseSync | undefined;
 export const dataDirectory = () => process.env.TTXD_DATA_DIR || join(process.cwd(), 'data');
 function privateFile(name: string, make: () => Buffer): Buffer {
@@ -21,7 +21,7 @@ function db() {
     const path = join(dataDirectory(), 'ttxd.sqlite');
     privateFile('ttxd.sqlite', () => Buffer.alloc(0));
     database = new DatabaseSync(path);
-    database.exec(`PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
+    database.exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=ON;
       CREATE TABLE IF NOT EXISTS permits(id TEXT PRIMARY KEY, duplicate_key TEXT NOT NULL UNIQUE, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS reports(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY, csrf TEXT NOT NULL, expires INTEGER NOT NULL);
@@ -78,7 +78,7 @@ export function findAdminSession(token: string) {
 }
 export function deleteAdminSession(token: string) { db().prepare('DELETE FROM admin_sessions WHERE hash=?').run(digest(token)); }
 export function insertPermit(input: PermitInput, request?:Idempotency): Permit {
-  const record: Permit = {...input,id:randomUUID(),createdAt:new Date().toISOString(),status:'active',source:'real',version:1};
+  const record: Permit = {...input,constructionStatus:input.constructionStatus||'uninspected',id:randomUUID(),createdAt:new Date().toISOString(),status:'active',source:'real',version:1};
   const duplicate = [input.issuingAuthority.trim().toLocaleLowerCase('vi'),input.permitNumber.trim().toLocaleLowerCase('vi'),input.issueDate.slice(0,4)].join('|');
   return insertAtomic('permit',record,request,()=>db().prepare('INSERT INTO permits VALUES(?,?,?)').run(record.id,digest(duplicate),encode(record)));
 }
@@ -99,7 +99,7 @@ export function listRecords() {
 export function listPublicMapRecords() {
   const {permits,reports}=listRecords();
   return [
-    ...permits.map(record=>({id:record.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:record.permitNumber,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:'active',source:'real',version:1})),
+    ...permits.map(record=>({id:record.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:record.permitNumber,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:'active',constructionStatus:record.constructionStatus||'uninspected'})),
     ...reports.map(record=>({id:record.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:record.publicCode,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:record.status}))
   ];
 }
@@ -108,6 +108,7 @@ function encode(value:unknown){return JSON.stringify({version:1,ciphertext:encry
 function transaction<T>(fn:()=>T):T{db().exec('BEGIN IMMEDIATE');try{const value=fn();db().exec('COMMIT');return value;}catch(error){db().exec('ROLLBACK');throw error;}}
 function insertAtomic<T extends Permit|CitizenReport|Inspection>(kind:string,record:T,request:Idempotency|undefined,write:()=>unknown):T{return transaction(()=>{if(request){const existing=db().prepare('SELECT digest,kind,id FROM idempotency WHERE key=?').get(request.key);if(existing){if(existing.digest!==request.digest||existing.kind!==kind)throw new WorkflowError(409,'Mã gửi đã dùng cho nội dung khác.');const table=kind==='permit'?'permits':kind==='report'?'reports':'inspections';const row=db().prepare(`SELECT payload FROM ${table} WHERE id=?`).get(existing.id as string);if(!row)throw new Error('Missing idempotency record');return decodePayload<T>(row.payload as string);}}write();db().prepare('INSERT INTO record_metadata VALUES(?,?,?,?)').run(kind,record.id,JSON.stringify(metadata(record)),record.version||1);if(request)db().prepare('INSERT INTO idempotency VALUES(?,?,?,?)').run(request.key,request.digest,kind,record.id);return record;});}
 export function updateReportStatus(input:StatusInput){return transaction(()=>{const row=db().prepare('SELECT payload FROM reports WHERE id=?').get(input.id);if(!row)throw new WorkflowError(404,'Không tìm thấy phản ánh.');const record=statusRecord(decodePayload<CitizenReport>(row.payload as string),input);db().prepare('UPDATE reports SET payload=? WHERE id=?').run(encode(record),record.id);db().prepare('INSERT INTO record_metadata VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET metadata=excluded.metadata,version=excluded.version').run('report',record.id,JSON.stringify(metadata(record)),record.version!);return record;});}
+export function updatePermitProgress(input:PermitProgressInput){return transaction(()=>{const row=db().prepare('SELECT payload FROM permits WHERE id=?').get(input.id);if(!row)throw new WorkflowError(404,'Không tìm thấy giấy phép.');const record=permitProgressRecord(decodePayload<Permit>(row.payload as string),input);db().prepare('UPDATE permits SET payload=? WHERE id=?').run(encode(record),record.id);db().prepare('INSERT INTO record_metadata VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET metadata=excluded.metadata,version=excluded.version').run('permit',record.id,JSON.stringify(metadata(record)),record.version!);return record;});}
 export function listInspections(){return db().prepare('SELECT payload FROM inspections ORDER BY rowid DESC').all().map(row=>decodePayload<Inspection>(row.payload as string));}
 export function insertInspection(input:InspectionInput,request?:Idempotency){const records=listRecords();if(input.permitId&&!records.permits.some(r=>r.id===input.permitId&&r.communeCode===input.communeCode))throw new WorkflowError(422,'GPXD liên kết không tồn tại.');if(input.reportId&&!records.reports.some(r=>r.id===input.reportId&&r.communeCode===input.communeCode))throw new WorkflowError(422,'Phản ánh liên kết không tồn tại.');const links=[...records.permits.filter(r=>r.id===input.permitId),...records.reports.filter(r=>r.id===input.reportId)];const record:Inspection={...input,siteKey:input.permitId||input.siteKey,id:randomUUID(),createdAt:new Date().toISOString(),source:inspectionSource(links),version:1};return insertAtomic('inspection',record,request,()=>db().prepare('INSERT INTO inspections VALUES(?,?,?)').run(record.id,encode(record),1));}
 export function saveAnalyticsSnapshot(snapshot:AnalyticsSnapshot){db().prepare('DELETE FROM analytics_snapshots WHERE expires<?').run(Date.now());db().prepare('INSERT INTO analytics_snapshots VALUES(?,?,?)').run(snapshot.id,encode(snapshot),Date.now()+30*60_000);}

@@ -67,6 +67,41 @@
 .map-action-panel{max-height:calc(100% - 120px);overflow:auto;overscroll-behavior:contain}.map-action-panel .map-panel-header .icon-button,.map-candidate-card .map-panel-header .icon-button,.map-measurement-card .icon-button{min-width:44px;min-height:44px;flex-shrink:0}.map-action-panel .map-panel-header>div{min-width:0;overflow-wrap:anywhere}.map-canvas-shell:has(.map-google-credit) .map-action-panel{bottom:90px}.map-action-options .button{white-space:normal;overflow-wrap:anywhere}
 @media(max-width:760px){.map-action-panel{max-height:55%;padding:12px}.map-canvas-shell:has(.map-google-credit) .map-action-panel{bottom:104px;max-height:calc(100% - 220px)}.map-action-options{grid-template-columns:minmax(0,1fr)}.map-action-panel .map-panel-header .icon-button{margin:-4px -5px 0 0}}
 
+/* Distinguish permit progress and report resolution on both public and admin maps. */
+.map-record-marker{font-size:0}
+.map-record-marker svg{display:block;width:19px;height:19px}
+.map-record-marker.permit[data-construction-status="uninspected"]{background:#c74747}
+.map-record-marker.permit[data-construction-status="under_construction"]{background:#d98718}
+.map-record-marker.permit[data-construction-status="completed"]{background:#16835d}
+.map-record-marker.report[data-status="unresolved"]{background:#d45a18}
+.map-record-marker.report[data-status="resolved"]{background:#16835d}
+.record-dot.status-uninspected{background:#c74747}
+.record-dot.status-under_construction{background:#d98718}
+.record-dot.status-completed,.record-dot.status-resolved{background:#16835d}
+.record-dot.status-unresolved{background:#d45a18}
+.status-badge.status-uninspected{color:#a62f2f;background:#fff0ef}
+.status-badge.status-under_construction{color:#9b5b05;background:#fff4dc}
+.status-badge.status-completed,.status-badge.status-resolved{color:#176b4d;background:#e8f6ef}
+.status-badge.status-unresolved{color:#a64215;background:#fff0e7}
+.map-shortcuts-note{font-size:10px;line-height:1.6;color:var(--muted);margin:-6px 0 12px}
+.map-draw-tools{left:auto;right:12px;top:62px;width:265px}
+.map-draw-options{display:grid;gap:7px;margin:8px 0}
+.map-draw-options .button{justify-content:flex-start;min-height:42px}
+.map-draw-tools>small{display:block;color:var(--muted);font-size:10px;line-height:1.6}
+.permit-progress-control{margin:18px 0;padding:14px;background:#f7f9fc;border:1px solid var(--line);border-radius:8px}
+.permit-progress-control h4{margin:0 0 11px;font-size:12px}
+.permit-progress-control form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:9px}
+.permit-progress-control .field{font-size:10px}
+.permit-progress-control .field select{min-height:40px;font-size:12px}
+.permit-progress-control form .button{min-height:40px}
+.permit-progress-control>small{display:block;color:var(--muted);font-size:10px;line-height:1.6;margin-top:9px}
+.permit-progress-control .field-error{margin:8px 0 0}
+.map-legend{gap:10px 16px}
+.map-legend .record-dot{width:10px;height:10px;border:1px solid #ffffff;box-shadow:0 0 0 1px #20364d22}
+.map-measure-panel{left:auto;right:12px;top:62px;bottom:auto;transform:none;width:min(310px,calc(100% - 24px))}
+.map-canvas-shell:has(.map-google-credit) .map-measure-panel{top:62px;bottom:auto}
+@media(max-width:760px){.map-draw-tools{left:auto;right:8px;top:111px;width:min(265px,calc(100% - 20px))}.map-measure-panel{left:auto;right:8px;top:111px;bottom:auto;width:min(300px,calc(100% - 16px));max-height:50%}.map-canvas-shell:has(.map-google-credit) .map-measure-panel{top:111px;bottom:auto}.permit-progress-control form{grid-template-columns:1fr}.permit-progress-control form .button{width:100%}.map-shortcuts-note{font-size:9px}}
+
 /* Keep long forms and data tables scrollable on short screens and touch devices. */
 .wizard-dialog>form{min-height:0}
 .wizard-dialog>form>.dialog-body{flex:1 1 0%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
