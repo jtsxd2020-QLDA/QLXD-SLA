@@ -2,7 +2,7 @@ export type Position = { lat: number; lng: number };
 export type Commune = { code: string; name: string; type: string };
 export type PermitInput = {
   permitNumber: string; issueDate: string; issuingAuthority: string;
-  investorName: string; projectName: string; address: string; communeCode: string;
+  investorName: string; investorPhone?: string; projectName: string; address: string; communeCode: string;
   lat: number; lng: number; area: number; floors: number;
   constructionType: 'new' | 'renovation'; notes: string;
 };

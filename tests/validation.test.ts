@@ -15,17 +15,17 @@ for(let x=1;x<10&&!location;x++)for(let y=1;y<10&&!location;y++){
  if(resolveCommune(position)?.code===feature.properties.communeCode)location={...position,communeCode:feature.properties.communeCode};
 }
 assert.ok(location);
-const permit={...location,permitNumber:'QA-VALID',issueDate:'2026-10-10',issuingAuthority:'QA Cơ quan',investorName:'QA Chủ đầu tư',projectName:'QA Công trình',address:'QA địa chỉ',area:100,floors:2,constructionType:'new',notes:''};
+const permit={...location,permitNumber:'QA-VALID',issueDate:'2026-10-10',issuingAuthority:'QA Cơ quan',investorName:'QA Chủ đầu tư',investorPhone:'0912345678',projectName:'QA Công trình',address:'QA địa chỉ',area:100,floors:2,constructionType:'new',notes:''};
 const report={...location,title:'QA phản ánh',content:'QA nội dung phản ánh kiểm thử',category:'safety',reporterName:'',reporterPhone:'',address:'QA địa chỉ'};
 const invalid=(value:unknown,kind:'permit'|'report'='permit')=>assert.throws(()=>kind==='permit'?validatePermit(value):validateReport(value),(error:unknown)=>error instanceof ApiError&&error.status===422);
-test('valid records accept exact polygon location, optional report identity',()=>{assert.equal(validatePermit(permit).communeCode,location?.communeCode);assert.equal(validateReport(report).reporterName,'');});
+test('valid records accept exact polygon location and legacy permits without a phone field',()=>{assert.equal(validatePermit(permit).communeCode,location?.communeCode);const legacyPermit:Record<string,unknown>={...permit};delete legacyPermit.investorPhone;assert.equal(validatePermit(legacyPermit).investorPhone,'');assert.equal(validateReport(report).reporterName,'');});
 test('reject permit invalid dates including impossible leap date and future',()=>{for(const issueDate of ['2026-02-30','2025-02-29','2099-01-01','10/10/2026'])invalid({...permit,issueDate});});
 test('reject invalid numerical and missing enum fields',()=>{for(const patch of [{area:0},{area:-1},{floors:1.5},{floors:201},{lat:NaN},{lng:Infinity},{constructionType:'bad'}])invalid({...permit,...patch});});
 test('reject wrong commune and outside province',()=>{
  invalid({...permit,communeCode:'invalid'});invalid({...permit,lat:0,lng:0});
  assert.equal(resolveCommune({lat:0,lng:0}),null);
 });
-test('strict fields and control characters cannot enter payloads',()=>{invalid({...permit,unknown:'value'});invalid({...permit,projectName:'QA\u0000BAD'});invalid({...report,category:'bad'},'report');invalid({...report,reporterPhone:'not-a-phone'},'report');invalid({...report,content:'short'},'report');});
+test('strict fields and control characters cannot enter payloads',()=>{invalid({...permit,unknown:'value'});invalid({...permit,projectName:'QA\u0000BAD'});invalid({...permit,investorPhone:'not-a-phone'});invalid({...report,category:'bad'},'report');invalid({...report,reporterPhone:'not-a-phone'},'report');invalid({...report,content:'short'},'report');});
 test('boundary provenance preserves original and discloses repair and reference-only status',()=>{
  const provenance=JSON.parse(readFileSync(new URL('../geodata/provenance.json',import.meta.url),'utf8'));
  assert.equal(provenance.count,75);assert.equal(provenance.invalidSourceGeometryCount,1);assert.equal(provenance.normalizationRepairs[0].code,'03760');assert.match(provenance.status,/chưa xác nhận/);

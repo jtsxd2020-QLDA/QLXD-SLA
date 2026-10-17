@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {z} from 'zod';
 import {WorkflowError} from './workflow';
-import {matchesSearch} from './search';
+import {matchesPhone,matchesSearch} from './search';
 import {readAnalyticsData,saveAnalyticsSnapshot} from './persistence';
 import type {AnalyticsFilters,AnalyticsSnapshot,RecordsResponse,Inspection} from './types';
 const validDate=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>{const d=new Date(s+'T00:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===s&&s>='1900-01-01'&&s<='2200-12-31';});
@@ -20,8 +20,9 @@ export function buildAnalyticsSnapshot(records:RecordsResponse,inspections:Inspe
  const inDate=(date:string)=>date>=f.dateFrom&&date<=f.dateTo;
  const scope=(r:{communeCode:string;source?:string})=>(!f.communeCode||r.communeCode===f.communeCode)&&(f.source==='all'||(r.source||'unknown')===f.source);
  const communeFor=(code:string)=>places.find((p:{code:string})=>p.code===code)?.name||code;
- const matchPermit=(r:RecordsResponse['permits'][number])=>matchesSearch(f.search,['GPXD','Giấy phép xây dựng',r.id,r.permitNumber,r.projectName,r.investorName,r.issuingAuthority,r.issueDate,r.createdAt,r.address,r.notes,r.constructionType,r.area,r.floors,communeFor(r.communeCode),statusLabels.active,sourceLabels[r.source||'unknown']]);
- const matchReport=(r:RecordsResponse['reports'][number])=>matchesSearch(f.search,['Phản ánh người dân',r.id,r.publicCode,r.title,r.content,r.address,r.reporterName,r.reporterPhone,r.category,categoryLabels[r.category],r.status,statusLabels[r.status],r.result,r.history?.flatMap(event=>[event.actor,event.reason,event.result,event.at]),communeFor(r.communeCode),sourceLabels[r.source||'unknown']]);
+ const matchPermit=(r:RecordsResponse['permits'][number])=>matchesSearch(f.search,['GPXD','Giấy phép xây dựng',r.id,r.permitNumber,r.projectName,r.investorName,r.issuingAuthority,r.issueDate,r.createdAt,r.address,r.notes,r.constructionType,r.area,r.floors,communeFor(r.communeCode),statusLabels.active,sourceLabels[r.source||'unknown']])||matchesPhone(f.search,[r.investorPhone]);
+ const matchReport=(r:RecordsResponse['reports'][number])=>matchesSearch(f.search,['Phản ánh người dân',r.id,r.publicCode,r.title,r.content,r.address,r.reporterName,r.reporterPhone,r.category,categoryLabels[r.category],r.status,statusLabels[r.status],r.result,r.history?.flatMap(event=>[event.actor,event.reason,event.result,event.at]),communeFor(r.communeCode),sourceLabels[r.source||'unknown']])||matchesPhone(f.search,[r.reporterPhone]);
+ const linkedPhoneSearch=(r:Inspection)=>matchesPhone(f.search,[...records.permits.filter(p=>p.id===r.permitId).map(p=>p.investorPhone),...records.reports.filter(a=>a.id===r.reportId).map(a=>a.reporterPhone)]);
  const reportScope=records.reports.filter(r=>scope(r)&&(!f.category||r.category===f.category)&&(!f.status||(f.status==='pending'?r.status!=='resolved':r.status===f.status))&&matchReport(r));
  const rows:AnalyticsSnapshot['rows']=[];const metrics:AnalyticsSnapshot['metrics']=[];const selected:{date:string;communeCode:string;breakdown:string}[]=[];
  const add=(key:string,label:string,value:number)=>metrics.push({key,label,value});
@@ -40,7 +41,7 @@ export function buildAnalyticsSnapshot(records:RecordsResponse,inspections:Inspe
   const events=reportScope.flatMap(r=>(r.history||[]).filter(e=>e.to==='resolved'&&inDate(vietnamDate(e.at))).map(e=>({id:r.id,event:e})));
   add('resolutionEvents','Lượt hoàn tất trong kỳ (theo ngày sự kiện)',events.length);add('resolvedUnique','Hồ sơ có sự kiện hoàn tất trong kỳ',new Set(events.map(e=>e.id)).size);
  }else{
-  let list=inspections.filter(r=>scope(r)&&r.inspectionDate<=f.dateTo&&(!f.category||records.reports.some(a=>a.id===r.reportId&&a.category===f.category))&&matchesSearch(f.search,[r.id,r.siteKey,r.permitId,r.reportId,r.address,r.inspector,r.inspectionDate,r.result,resultLabels[r.verified?r.result:'unverified'],r.verified,r.basis,r.notes,r.createdAt,communeFor(r.communeCode),...records.permits.filter(p=>p.id===r.permitId).flatMap(p=>[p.permitNumber,p.projectName,p.investorName,p.address]),...records.reports.filter(a=>a.id===r.reportId).flatMap(a=>[a.publicCode,a.title,a.content,a.address,a.reporterName,a.reporterPhone,categoryLabels[a.category],statusLabels[a.status],a.result])]));
+  let list=inspections.filter(r=>scope(r)&&r.inspectionDate<=f.dateTo&&(!f.category||records.reports.some(a=>a.id===r.reportId&&a.category===f.category))&&(matchesSearch(f.search,[r.id,r.siteKey,r.permitId,r.reportId,r.address,r.inspector,r.inspectionDate,r.result,resultLabels[r.verified?r.result:'unverified'],r.verified,r.basis,r.notes,r.createdAt,communeFor(r.communeCode),...records.permits.filter(p=>p.id===r.permitId).flatMap(p=>[p.permitNumber,p.projectName,p.investorName,p.address]),...records.reports.filter(a=>a.id===r.reportId).flatMap(a=>[a.publicCode,a.title,a.content,a.address,a.reporterName,a.reporterPhone,categoryLabels[a.category],statusLabels[a.status],a.result])])||linkedPhoneSearch(r)));
   if(f.inspectionMode==='latest'){const latest=new Map<string,Inspection>();for(const r of list){const key=r.permitId||r.communeCode+':'+r.siteKey;const old=latest.get(key);if(!old||r.inspectionDate>old.inspectionDate||r.inspectionDate===old.inspectionDate&&r.createdAt>old.createdAt)latest.set(key,r);}list=[...latest.values()];}
   list=list.filter(r=>inDate(r.inspectionDate)&&(!f.result||(r.verified?r.result:'unverified')===f.result));
   columns=[{key:'id',label:'Mã kiểm tra'},{key:'siteKey',label:'Mã công trình'},{key:'inspectionDate',label:'Ngày kiểm tra'},{key:'commune',label:'Địa bàn'},{key:'result',label:'Kết quả'},{key:'verified',label:'Đã xác minh'},{key:'source',label:'Nguồn'}];

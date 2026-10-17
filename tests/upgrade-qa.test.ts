@@ -10,7 +10,7 @@ const permitBase={...position,issuingAuthority:'QA',investorName:'Không xuất 
 const permits:Permit[]=[
  {...permitBase,id:'P1',permitNumber:'001',communeCode:'03664',source:'real',issueDate:'2026-08-31',createdAt:'2026-08-31T17:00:00.000Z'},
  {...permitBase,id:'P2',permitNumber:'002',communeCode:'03670',source:'demo',issueDate:'2026-09-30',createdAt:'2026-09-30T16:59:59.999Z'},
- {...permitBase,id:'P3',permitNumber:'003',communeCode:'03664',issueDate:'2026-09-01',createdAt:'2026-09-30T17:00:00.000Z'},
+ {...permitBase,id:'P3',permitNumber:'003',investorPhone:'QA-0987654321',communeCode:'03664',issueDate:'2026-09-01',createdAt:'2026-09-30T17:00:00.000Z'},
  {...permitBase,id:'P4',permitNumber:'004',communeCode:'03670',source:'real',issueDate:'2026-10-01',createdAt:'2026-09-30T17:00:00.000Z'},
 ];
 const events:StatusEvent[]=[
@@ -66,6 +66,8 @@ test('QA independent: inspection visits and latest site results stop at selected
 test('QA independent: analytics search matches accentless locality, report details and linked inspection records',()=>{
  const locality=snapshot({group:'permits',search:'Chieng An'});
  assert.equal(locality.total,1);assert.equal(locality.rows[0].permitNumber,'003');
+ const phone=snapshot({group:'permits',search:'987654'});
+ assert.equal(phone.total,1);assert.equal(phone.rows[0].permitNumber,'003');
  const report=snapshot({group:'reports',search:'noi dung lien he rieng'});
  assert.equal(report.total,3);assert.equal(metric(report,'total'),3);
  const inspectionsResult=snapshot({group:'inspections',search:'001'});

@@ -75,3 +75,39 @@
 .report-dashboard .table-scroll{max-height:min(500px,70dvh)}
 .admin-login-dialog{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
 .form-fieldset{min-height:0;padding:0}
+
+/* Explicit search submission, permit suggestions, and province-wide rankings. */
+.search-form{display:flex;align-items:center;gap:8px;flex:1;min-width:min(430px,100%)}
+.search-control{position:relative;flex:1;min-width:0}
+.search-form .search-box{width:100%;min-width:0;flex:none}
+.search-submit,.search-clear{height:41px;flex-shrink:0}
+.search-hint{margin:-13px 0 16px;color:#64748b;font-size:12px}
+.search-suggestions{position:absolute;z-index:30;top:calc(100% + 6px);left:0;right:0;max-height:min(340px,45dvh);overflow:auto;margin:0;padding:6px;list-style:none;border:1px solid #d9e2ee;border-radius:9px;background:white;box-shadow:0 12px 28px #18304b24}
+.search-suggestions li{margin:0}
+.search-suggestions [role=option]{display:grid;gap:5px;width:100%;padding:10px 11px;border-radius:6px;background:white;color:var(--ink);text-align:left}
+.search-suggestions [role=option]:hover,.search-suggestions [role=option]:focus-visible{background:#eff5ff}
+.search-suggestions [role=option] strong{font-size:12px}
+.search-suggestions [role=option] small{font-size:10px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.search-suggestion-empty{padding:11px;color:var(--muted);font-size:11px;line-height:1.5}
+.commune-rankings{margin:20px 0}
+.commune-ranking-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.commune-ranking-card{min-width:0;padding:17px;border:1px solid var(--line);border-radius:9px;background:#fbfcff}
+.commune-ranking-card .section-heading{margin-bottom:10px}
+.commune-ranking-card h3{margin:0;font-size:14px}
+.commune-ranking-card .section-heading p{margin:5px 0 0;font-size:11px}
+.commune-ranking-list{display:grid;gap:3px;margin:0;padding:0;list-style:none;counter-reset:commune-ranking}
+.commune-ranking-list[start="9"]{counter-reset:commune-ranking 8}
+.commune-ranking-list li{counter-increment:commune-ranking}
+.commune-ranking-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(60px,1.2fr) 35px;align-items:center;gap:9px;width:100%;min-height:37px;padding:5px 7px;border-radius:5px;background:transparent;color:var(--ink);text-align:left}
+.commune-ranking-row::before{content:counter(commune-ranking) ".";grid-column:1;grid-row:1;color:#8190a5;font-size:10px}
+.commune-ranking-name{grid-column:1;grid-row:1;padding-left:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.commune-ranking-track{grid-column:2;grid-row:1;height:12px;overflow:hidden;border-radius:10px;background:#e9eef6}
+.commune-ranking-track i{display:block;height:100%;border-radius:inherit;background:#3b70bd}
+.commune-ranking-card:nth-child(2) .commune-ranking-track i{background:#d88738}
+.commune-ranking-row strong{grid-column:3;grid-row:1;text-align:right;font-size:11px}
+.commune-ranking-row:hover,.commune-ranking-row:focus-visible{background:#edf4ff}
+.commune-ranking-more{margin:8px 7px 0;font-size:11px;color:var(--blue)}
+.commune-ranking-more summary{min-height:38px;padding:10px 0;cursor:pointer}
+.commune-ranking-empty{margin:12px 0 2px;font-size:11px}
+@media(max-width:1100px){.search-form{min-width:100%}}
+@media(max-width:760px){.search-form{width:100%;min-width:0;flex-basis:100%;gap:6px}.search-submit{padding:9px 10px;font-size:11px}.search-clear{padding:9px 10px;font-size:11px}.search-suggestions{max-height:45dvh}.commune-ranking-grid{grid-template-columns:1fr}.commune-ranking-card{padding:14px}.commune-ranking-row{grid-template-columns:minmax(100px,1fr) minmax(70px,1.2fr) 34px}}
