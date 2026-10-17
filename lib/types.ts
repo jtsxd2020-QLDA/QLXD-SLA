@@ -26,5 +26,5 @@ export type InspectionInput={permitId?:string;reportId?:string;siteKey:string;ad
 export type Inspection=InspectionInput & {id:string;createdAt:string;source:DataSource;version:number};
 export type StatusInput={id:string;version:number;status:ReportStatus;result:string;reason:string};
 export type Idempotency={key:string;digest:string;scope:string};
-export type AnalyticsFilters={group:'permits'|'reports'|'inspections';dateFrom:string;dateTo:string;communeCode:string;category:string;status:string;result:string;source:DataSource|'all';dateBasis:'issue'|'created';inspectionMode:'all'|'latest'};
+export type AnalyticsFilters={group:'permits'|'reports'|'inspections';dateFrom:string;dateTo:string;communeCode:string;category:string;status:string;result:string;source:DataSource|'all';dateBasis:'issue'|'created';inspectionMode:'all'|'latest';search:string};
 export type AnalyticsSnapshot={id:string;generatedAt:string;filters:AnalyticsFilters;metrics:{key:string;label:string;value:number}[];monthly:{month:string;count:number}[];communes:{code:string;name:string;count:number}[];breakdown:{key:string;label:string;count:number}[];columns:{key:string;label:string}[];rows:Record<string,string|number|boolean|null>[];total:number;notes:string[]};

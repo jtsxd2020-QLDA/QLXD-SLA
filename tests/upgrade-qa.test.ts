@@ -35,7 +35,7 @@ const inspections:Inspection[]=[
  {...inspectionBase,id:'I4',permitId:'P3',siteKey:'S3',communeCode:'03664',inspectionDate:'2026-09-30',result:'no_permit_presented',verified:false},
  {...inspectionBase,id:'I5',permitId:'P1',siteKey:'S1',communeCode:'03664',inspectionDate:'2026-10-01',result:'wrong_permit',verified:true},
 ];
-const filters=(patch:Partial<AnalyticsFilters>={}):AnalyticsFilters=>({group:'permits',dateFrom:'2026-09-01',dateTo:'2026-09-30',communeCode:'',category:'',status:'',result:'',source:'all',dateBasis:'issue',inspectionMode:'all',...patch});
+const filters=(patch:Partial<AnalyticsFilters>={}):AnalyticsFilters=>({group:'permits',dateFrom:'2026-09-01',dateTo:'2026-09-30',communeCode:'',category:'',status:'',result:'',source:'all',dateBasis:'issue',inspectionMode:'all',search:'',...patch});
 const snapshot=(patch:Partial<AnalyticsFilters>={},records={permits,reports})=>buildAnalyticsSnapshot(records,inspections,filters(patch),new Date('2026-10-14T03:00:00Z'));
 const metric=(s:ReturnType<typeof snapshot>,key:string)=>{const result=s.metrics.find(item=>item.key===key);assert.ok(result,`Metric ${key} exists`);return result.value;};
 
@@ -59,9 +59,18 @@ test('QA independent: inspection visits and latest site results stop at selected
  const all=snapshot({group:'inspections'});assert.equal(all.total,4);assert.equal(metric(all,'sites'),3);
  assert.equal(snapshot({group:'inspections',inspectionMode:'latest'}).total,3);
  assert.equal(snapshot({group:'inspections',inspectionMode:'latest',result:'wrong_permit'}).total,1,'Choose latest THEN filter result; no older noncompliant I1 or future I5');
- assert.equal(snapshot({group:'inspections',inspectionMode:'all',result:'wrong_permit'}).total,2);
+ assert.equal(snapshot({group:'inspections',inspectionMode:'all',search:'',result:'wrong_permit'}).total,2);
  assert.equal(snapshot({group:'inspections',source:'real'}).total,3);
  assert.equal(snapshot({group:'inspections',source:'demo'}).total,1);
+});
+test('QA independent: analytics search matches accentless locality, report details and linked inspection records',()=>{
+ const locality=snapshot({group:'permits',search:'Chieng An'});
+ assert.equal(locality.total,1);assert.equal(locality.rows[0].permitNumber,'003');
+ const report=snapshot({group:'reports',search:'noi dung lien he rieng'});
+ assert.equal(report.total,3);assert.equal(metric(report,'total'),3);
+ const inspectionsResult=snapshot({group:'inspections',search:'001'});
+ assert.equal(inspectionsResult.total,2,'An inspection can be found by its linked permit number');
+ assert.throws(()=>snapshot({group:'reports',search:'x'.repeat(121)}),/Bộ lọc báo cáo không hợp lệ/);
 });
 test('QA independent: geographic totals reconcile within each group and source',()=>{
  for(const group of ['permits','reports','inspections'] as const)for(const source of ['all','real','demo','unknown'] as const){
