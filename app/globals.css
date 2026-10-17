@@ -66,3 +66,12 @@
 /* Gesture overlays scroll within the map and preserve provider attribution. */
 .map-action-panel{max-height:calc(100% - 120px);overflow:auto;overscroll-behavior:contain}.map-action-panel .map-panel-header .icon-button,.map-candidate-card .map-panel-header .icon-button,.map-measurement-card .icon-button{min-width:44px;min-height:44px;flex-shrink:0}.map-action-panel .map-panel-header>div{min-width:0;overflow-wrap:anywhere}.map-canvas-shell:has(.map-google-credit) .map-action-panel{bottom:90px}.map-action-options .button{white-space:normal;overflow-wrap:anywhere}
 @media(max-width:760px){.map-action-panel{max-height:55%;padding:12px}.map-canvas-shell:has(.map-google-credit) .map-action-panel{bottom:104px;max-height:calc(100% - 220px)}.map-action-options{grid-template-columns:minmax(0,1fr)}.map-action-panel .map-panel-header .icon-button{margin:-4px -5px 0 0}}
+
+/* Keep long forms and data tables scrollable on short screens and touch devices. */
+.wizard-dialog>form{min-height:0}
+.wizard-dialog>form>.dialog-body{flex:1 1 0%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
+.table-scroll{max-height:min(560px,70dvh);overflow-x:auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
+.table-scroll thead th{position:sticky;top:0;z-index:1}
+.report-dashboard .table-scroll{max-height:min(500px,70dvh)}
+.admin-login-dialog{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
+.form-fieldset{min-height:0;padding:0}
