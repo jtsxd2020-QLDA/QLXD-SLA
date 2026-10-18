@@ -6,7 +6,7 @@ import type { Map as LibreMap, Marker, GeoJSONSource } from 'maplibre-gl';
 import { getCommuneBounds, setDisplayBoundaries, resolveCommune } from '@/lib/geo';
 import type { BoundaryCollection } from '@/lib/geometry';
 import communes from '@/lib/communes.json';
-import type { MapRecord, Position } from '@/lib/types';
+import type { MapRecord, Position, RecordMeasurement } from '@/lib/types';
 import { formatArea, formatDistance, measureLineMeters, measurePolygonAreaSquareMeters } from '@/lib/map-measurement';
 import { BASEMAPS, GOOGLE_MAPS_KEY, GOOGLE_HYBRID_SOURCE, REFERENCE_SOURCES, googleCopyright, resolveBasemap, type BasemapId } from '@/lib/basemaps';
 import { constructionStatusLabel, getConstructionStatus, reportStatusLabel } from '@/lib/record-status';
@@ -14,13 +14,13 @@ import { constructionStatusLabel, getConstructionStatus, reportStatusLabel } fro
 type MeasurementType = 'line' | 'area';
 type WorkflowAction = 'report' | 'inspect' | 'permit';
 type Props = {
-  records: MapRecord[]; selectedCommune: string; onPick: (point: Position) => void;
+  records: MapRecord[]; selectedCommune: string; onPick: (point: Position, measurement?: RecordMeasurement) => void;
   onSelect: (record: MapRecord) => void; picked: Position | null; selectedRecordId?: string; onCommuneNavigate?: (code:string)=>void;
-  workflowRole?: 'citizen' | 'admin'; selectionOnly?: boolean;
-  onWorkflowAction?: (action: WorkflowAction, point: Position) => void;
+  workflowRole?: 'citizen' | 'admin'; selectionOnly?: boolean; onMeasurementClear?:()=>void;
+  onWorkflowAction?: (action: WorkflowAction, point: Position, measurement?: RecordMeasurement) => void;
 };
 
-export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction }: Props) {
+export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction, onMeasurementClear }: Props) {
   const [candidate,setCandidate]=useState<{position:Position;accuracy?:number}|null>(null);
   const [locating,setLocating]=useState(false);
   const [locationMessage,setLocationMessage]=useState('');
@@ -39,7 +39,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   const longPressHandlers=useRef({open:(point:Position)=>setGesturePosition(point)});
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
-  const handlers = useRef({ onPick, onSelect, onWorkflowAction });
+  const handlers = useRef({ onPick, onSelect, onWorkflowAction, onMeasurementClear });
   const markers = useRef<Marker[]>([]);
   const pickMarker = useRef<Marker | null>(null);
   const [ready, setReady] = useState(false);
@@ -72,9 +72,9 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   useEffect(()=>()=>{gpsRequest.current++;},[]);
   useEffect(()=>{if(!expanded)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous;};},[expanded]);
   useEffect(()=>{workflowState.current={selectionOnly,measureMode};},[selectionOnly,measureMode]);
-  useEffect(()=>{handlers.current={onPick,onSelect,onWorkflowAction};},[onPick,onSelect,onWorkflowAction]);
-  useEffect(()=>{longPressHandlers.current={open:(point)=>{if(workflowState.current.selectionOnly||workflowState.current.measureMode)return;clearMeasurement();setCandidate(null);setWorkflowPosition(null);setGesturePosition(point);setPositionToolsOpen(false);setToolsOpen(false);}};},[]);
-  useEffect(()=>{const close=(event:KeyboardEvent)=>{if(event.key!=='Escape'||document.querySelector('dialog[open]'))return;const stop=()=>{event.preventDefault();event.stopImmediatePropagation();};if(workflowPosition){stop();setWorkflowPosition(null);return;}if(gesturePosition){stop();setGesturePosition(null);return;}if(measureMode||measurementFinished){stop();setMeasureMode(null);setMeasurementType(null);setMeasurePoints([]);setMeasurementFinished(false);return;}if(candidate||expanded||positionToolsOpen||drawToolsOpen){stop();gpsRequest.current++;setLocating(false);setCandidate(null);setExpanded(false);setPositionToolsOpen(false);setDrawToolsOpen(false);setLocationMessage('');}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[candidate,expanded,positionToolsOpen,drawToolsOpen,gesturePosition,measureMode,measurementFinished,workflowPosition]);
+  useEffect(()=>{handlers.current={onPick,onSelect,onWorkflowAction,onMeasurementClear};},[onPick,onSelect,onWorkflowAction,onMeasurementClear]);
+  useEffect(()=>{longPressHandlers.current={open:(point)=>{if(workflowState.current.measureMode)return;gpsRequest.current++;setLocating(false);setLocationMessage('');clearMeasurement();setWorkflowPosition(null);if(workflowState.current.selectionOnly){setGesturePosition(null);setCandidate({position:point});}else{setCandidate(null);setGesturePosition(point);}setPositionToolsOpen(false);setToolsOpen(false);}};},[]);
+  useEffect(()=>{const close=(event:KeyboardEvent)=>{if(event.key!=='Escape'||document.querySelector('dialog[open]'))return;const stop=()=>{event.preventDefault();event.stopImmediatePropagation();};if(workflowPosition){stop();setWorkflowPosition(null);return;}if(gesturePosition){stop();setGesturePosition(null);return;}if(measureMode||measurementFinished){stop();clearMeasurement();return;}if(candidate||expanded||positionToolsOpen||drawToolsOpen){stop();gpsRequest.current++;setLocating(false);setCandidate(null);setExpanded(false);setPositionToolsOpen(false);setDrawToolsOpen(false);setLocationMessage('');}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[candidate,expanded,positionToolsOpen,drawToolsOpen,gesturePosition,measureMode,measurementFinished,workflowPosition]);
   function locate(){
     if(!navigator.geolocation){setLocationMessage('Thiết bị chưa hỗ trợ định vị. Hãy chọn điểm trên bản đồ.');return;}
     const request=++gpsRequest.current;setLocating(true);setLocationMessage('');
@@ -84,15 +84,16 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   const candidateCommune=candidate?resolveCommune(candidate.position):null;
   const measuredDistance=measureLineMeters(measurePoints);
   const measuredArea=measurePolygonAreaSquareMeters(measurePoints);
-  function clearMeasurement(){setMeasureMode(null);setMeasurementType(null);setMeasurePoints([]);setMeasurementFinished(false);}
+  function clearMeasurement(){handlers.current.onMeasurementClear?.();setMeasureMode(null);setMeasurementType(null);setMeasurePoints([]);setMeasurementFinished(false);}
   function beginMeasurement(type:MeasurementType,startPoint:Position|null=gesturePosition){
+    ignoreMapClick.current=null;handlers.current.onMeasurementClear?.();
     setMeasurementType(type);setMeasurePoints(startPoint?[startPoint]:[]);setMeasurementFinished(false);setMeasureMode(type);setGesturePosition(null);setWorkflowPosition(null);setCandidate(null);setPositionToolsOpen(false);setDrawToolsOpen(false);setToolsOpen(false);
   }
   function finishMeasurement(){
     if(!measureMode||measurePoints.length<(measureMode==='line'?2:3))return;
     const point=measurePoints[0];setMeasureMode(null);setMeasurementFinished(true);setGesturePosition(null);setCandidate(null);
     if(!resolveCommune(point)){setWorkflowPosition(null);setLocationMessage('Điểm bắt đầu phép đo chưa thuộc một xã/phường của tỉnh Sơn La. Kết quả đo được giữ lại nhưng chưa thể lập hồ sơ tại đây.');return;}
-    setLocationMessage('');setWorkflowPosition(point);handlers.current.onPick(point);
+    setLocationMessage('');setWorkflowPosition(point);handlers.current.onPick(point,{type:measureMode,points:measurePoints.map(p=>({...p}))});
   }
   function confirmCandidate(){
     if(!candidate||!candidateCommune)return;
@@ -101,14 +102,14 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
   }
   function chooseWorkflowAction(action:WorkflowAction){
     if(!workflowPosition)return;
-    const point=workflowPosition;setWorkflowPosition(null);handlers.current.onWorkflowAction?.(action,point);
+    const point=workflowPosition;setWorkflowPosition(null);handlers.current.onWorkflowAction?.(action,point,measurementFinished&&measurementType?{type:measurementType,points:measurePoints.map(p=>({...p}))}:undefined);
   }
   useEffect(()=>{
     const drawingShortcut=(event:KeyboardEvent)=>{
       if(selectionOnly||document.querySelector('dialog[open]')||(!event.metaKey&&!event.ctrlKey)||event.altKey||event.shiftKey||event.repeat)return;
       const key=event.key.toLocaleLowerCase();if(key!=='d'&&key!=='a')return;
       const target=event.target as HTMLElement|null;if(target?.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
-      event.preventDefault();event.stopPropagation();const mode=key==='d'?'line':'area';setMeasurementType(mode);setMeasurePoints([]);setMeasurementFinished(false);setMeasureMode(mode);setGesturePosition(null);setWorkflowPosition(null);setCandidate(null);setPositionToolsOpen(false);setDrawToolsOpen(false);setToolsOpen(false);
+      event.preventDefault();event.stopPropagation();ignoreMapClick.current=null;handlers.current.onMeasurementClear?.();const mode=key==='d'?'line':'area';setMeasurementType(mode);setMeasurePoints([]);setMeasurementFinished(false);setMeasureMode(mode);setGesturePosition(null);setWorkflowPosition(null);setCandidate(null);setPositionToolsOpen(false);setDrawToolsOpen(false);setToolsOpen(false);
     };
     window.addEventListener('keydown',drawingShortcut);
     return()=>window.removeEventListener('keydown',drawingShortcut);
@@ -178,15 +179,14 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
       const suppressedClick=ignoreMapClick.current;
       if(suppressedClick&&Date.now()<=suppressedClick.expiresAt&&Math.hypot(event.point.x-suppressedClick.x,event.point.y-suppressedClick.y)<36){ignoreMapClick.current=null;return;}
       if(suppressedClick&&Date.now()>suppressedClick.expiresAt)ignoreMapClick.current=null;
-      gpsRequest.current++;setLocating(false);setLocationMessage('');
+      if(!workflowState.current.measureMode)return;
       const point={lat:event.lngLat.lat,lng:event.lngLat.lng};
-      if(workflowState.current.selectionOnly){setGesturePosition(null);setWorkflowPosition(null);clearMeasurement();setCandidate({position:point});return;}
-      if(workflowState.current.measureMode){setMeasurePoints((previous)=>[...previous,point]);setMeasurementFinished(false);setWorkflowPosition(null);return;}
-      setGesturePosition(null);setWorkflowPosition(null);clearMeasurement();setCandidate({position:point});
+      setMeasurePoints(previous=>previous.length<200?[...previous,point]:previous);
+      setMeasurementFinished(false);setWorkflowPosition(null);
     });
     instance.on('dblclick', (event) => {
       event.preventDefault();
-      if(workflowState.current.selectionOnly||workflowState.current.measureMode)return;
+      if(workflowState.current.measureMode)return;
       longPressHandlers.current.open({lat:event.lngLat.lat,lng:event.lngLat.lng});
     });
     instance.on('load', async () => {
@@ -226,7 +226,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     const clear=()=>{if(timer)clearTimeout(timer);timer=undefined;start=null;};
     const openAt=(clientX:number,clientY:number)=>{const rect=element.getBoundingClientRect();const x=clientX-rect.left,y=clientY-rect.top;const point=map.current?.unproject([x,y]);if(!point)return;ignoreMapClick.current={x,y,expiresAt:Date.now()+900};longPressHandlers.current.open({lat:point.lat,lng:point.lng});};
     const down=(event:PointerEvent)=>{
-      if(workflowState.current.selectionOnly||workflowState.current.measureMode||event.button>0||!(event.pointerType==='touch'||event.pointerType==='pen'||event.pointerType==='mouse'))return;
+      if(workflowState.current.measureMode||event.button>0||!(event.pointerType==='touch'||event.pointerType==='pen'||event.pointerType==='mouse'))return;
       const target=event.target as Element|null;
       if(target?.closest('.maplibregl-ctrl,.map-tools,.map-quick-controls,.map-position-tools,.map-candidate-card,.map-action-panel,.map-measurement-card,.map-record-marker'))return;
       const now=performance.now();
@@ -246,15 +246,19 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     return()=>{clear();element.removeEventListener('pointerdown',down,true);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);element.removeEventListener('contextmenu',context);};
   },[]);
 
+  const selectedMeasurement=records.find(record=>record.id===selectedRecordId)?.measurement;
+  const visibleMeasurement:RecordMeasurement|undefined=measureMode?{type:measureMode,points:measurePoints}:selectedRecordId?selectedMeasurement:(measurementType?{type:measurementType,points:measurePoints}:undefined);
+  const visiblePoints=visibleMeasurement?.points;
+  const visibleType=visibleMeasurement?.type;
   useEffect(()=>{
     const source=map.current?.getSource('measurement') as GeoJSONSource|undefined;
     if(!source)return;
-    const features:GeoJSON.Feature[]=[];
-    if(measurePoints.length===1)features.push({type:'Feature',properties:{kind:'point'},geometry:{type:'Point',coordinates:[measurePoints[0].lng,measurePoints[0].lat]}});
-    if(measurePoints.length>=2&&(measurementType==='line'||measurePoints.length<3))features.push({type:'Feature',properties:{kind:'line'},geometry:{type:'LineString',coordinates:measurePoints.map(point=>[point.lng,point.lat])}});
-    if(measurementType==='area'&&measurePoints.length>=3){const ring=measurePoints.map(point=>[point.lng,point.lat]);ring.push(ring[0]);features.push({type:'Feature',properties:{kind:'area'},geometry:{type:'Polygon',coordinates:[ring]}});}
+    const points=visiblePoints||[];
+    const features:GeoJSON.Feature[]=points.map(point=>({type:'Feature',properties:{kind:'point'},geometry:{type:'Point',coordinates:[point.lng,point.lat]}}));
+    if(points.length>=2&&(visibleType==='line'||points.length<3))features.push({type:'Feature',properties:{kind:'line'},geometry:{type:'LineString',coordinates:points.map(point=>[point.lng,point.lat])}});
+    if(visibleType==='area'&&points.length>=3){const ring=points.map(point=>[point.lng,point.lat]);ring.push(ring[0]);features.push({type:'Feature',properties:{kind:'area'},geometry:{type:'Polygon',coordinates:[ring]}});}
     source.setData({type:'FeatureCollection',features});
-  },[measurePoints,measurementType,ready]);
+  },[visiblePoints,visibleType,ready]);
 
   useEffect(() => {
     const instance = map.current;
@@ -410,7 +414,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
         const bubble=document.createElementNS(svgNamespace,'path');bubble.setAttribute('d','M21 11.5a8.5 8.5 0 0 1-12.8 7.3L3 21l1.6-4.8A8.5 8.5 0 1 1 21 11.5zM8 11.5h.01M12 11.5h.01M16 11.5h.01');icon.append(bubble);
       }
       const pin=document.createElement('span');pin.className='map-marker-pin';pin.append(icon);button.append(pin);
-      button.addEventListener('click', (event) => { event.stopPropagation(); handlers.current.onSelect(record); });
+      button.addEventListener('click', (event) => { event.stopPropagation();clearMeasurement();setCandidate(null);setGesturePosition(null);setWorkflowPosition(null);setDrawToolsOpen(false);setPositionToolsOpen(false);handlers.current.onSelect(record); });
       return new maplibregl.Marker({ element: button, anchor: 'bottom' }).setLngLat([record.lng, record.lat]).addTo(instance);
     });
     return () => { markers.current.forEach((marker) => marker.remove()); };
@@ -445,11 +449,22 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
 
   useEffect(() => {
     const record = records.find((item) => item.id === selectedRecordId);
-    if (record && map.current && ready) map.current.flyTo({ center: [record.lng, record.lat], zoom: Math.max(map.current.getZoom(), 13), duration: 550 });
+    if(!record||!map.current||!ready)return;
+    const instance=map.current;
+    const frame=requestAnimationFrame(()=>{
+      instance.resize();
+      const duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:550;
+      if(record.measurement?.points.length){
+        const bounds=new maplibregl.LngLatBounds([record.lng,record.lat],[record.lng,record.lat]);
+        record.measurement.points.forEach(point=>bounds.extend([point.lng,point.lat]));
+        instance.fitBounds(bounds,{padding:{top:170,bottom:80,left:60,right:60},maxZoom:18,duration});
+      }else instance.flyTo({center:[record.lng,record.lat],zoom:Math.max(instance.getZoom(),16),duration});
+    });
+    return()=>cancelAnimationFrame(frame);
   }, [selectedRecordId, records, ready]);
 
   return <div className={`map-canvas-shell${expanded?' map-expanded':''}`} style={{ position: 'relative', width: '100%', minHeight: 360 }}>
-    <div ref={container} data-testid="map-canvas" data-basemap={activeBase} data-basemap-loaded={baseLoaded ? 'true' : 'false'} data-reference-visible={referencesVisible && activeBase === 'satellite' ? 'true' : 'false'} data-reference-loaded={referencesLoaded ? 'true' : 'false'} data-boundaries-visible={boundariesVisible ? 'true' : 'false'} data-boundaries-rendered={rendered ? 'true' : 'false'} data-expressway-visible={expresswayVisible ? 'true' : 'false'} data-expressway-loaded={expresswayLoaded ? 'true' : 'false'} data-expressway-count={expresswayCount} role="region" aria-label="Bản đồ trật tự xây dựng tỉnh Sơn La" style={{ position: 'absolute', inset: 0 }} />
+    <div ref={container} data-testid="map-canvas" data-measurement-type={visibleType||''} data-measurement-points={visiblePoints?.length||0} data-basemap={activeBase} data-basemap-loaded={baseLoaded ? 'true' : 'false'} data-reference-visible={referencesVisible && activeBase === 'satellite' ? 'true' : 'false'} data-reference-loaded={referencesLoaded ? 'true' : 'false'} data-boundaries-visible={boundariesVisible ? 'true' : 'false'} data-boundaries-rendered={rendered ? 'true' : 'false'} data-expressway-visible={expresswayVisible ? 'true' : 'false'} data-expressway-loaded={expresswayLoaded ? 'true' : 'false'} data-expressway-count={expresswayCount} role="region" aria-label="Bản đồ trật tự xây dựng tỉnh Sơn La" style={{ position: 'absolute', inset: 0 }} />
     <div ref={tools} className="map-tools" aria-label="Công cụ bản đồ">
       <button ref={toolsToggle} type="button" className="map-tools-toggle" aria-expanded={toolsOpen} aria-controls="map-layers-panel" onClick={() => setToolsOpen((open) => !open)}><Layers3 size={17} />Lớp bản đồ</button>
       <div id="map-layers-panel" className="map-tools-popover" hidden={!toolsOpen}>
@@ -470,10 +485,10 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     {!selectionOnly&&drawToolsOpen&&<section className="map-position-tools map-draw-tools" role="region" aria-label="Công cụ đo vẽ"><header className="map-panel-header"><strong>Công cụ đo vẽ</strong><button className="icon-button" type="button" aria-label="Đóng công cụ đo vẽ" onClick={()=>setDrawToolsOpen(false)}><X size={17}/></button></header><div className="map-draw-options"><button type="button" className="button secondary" onClick={()=>beginMeasurement('line',null)}><Ruler size={16}/>Đo đoạn thẳng</button><button type="button" className="button secondary" onClick={()=>beginMeasurement('area',null)}><Pentagon size={16}/>Vẽ khu vực</button></div><small>Phím tắt: ⌘/Ctrl + D đo chiều dài · ⌘/Ctrl + A vẽ khu vực</small></section>}
     {positionToolsOpen&&<section className="map-position-tools"><header className="map-panel-header"><strong>Tìm vị trí</strong><button className="icon-button" type="button" aria-label="Đóng tìm vị trí" onClick={()=>setPositionToolsOpen(false)}><X size={17}/></button></header><label>Tìm xã/phường<input list="map-commune-options" placeholder="Tên hoặc mã xã/phường" onChange={event=>{const value=event.target.value.trim().toLocaleLowerCase('vi');const commune=communes.find(c=>c.code===value||c.name.toLocaleLowerCase('vi')===value);if(commune){const bounds=getCommuneBounds(commune.code);if(bounds)map.current?.fitBounds(bounds,{padding:50});onCommuneNavigate?.(commune.code);setPositionToolsOpen(false);}}}/><datalist id="map-commune-options">{communes.map(c=><option key={c.code} value={c.name}>{c.code}</option>)}</datalist></label><form className="map-position-form" onSubmit={coordinate}><label>Vĩ độ<input name="lat" type="number" step="any" placeholder="21.3" required/></label><label>Kinh độ<input name="lng" type="number" step="any" placeholder="103.9" required/></label><button className="button secondary" type="submit">Đưa đến tọa độ</button></form></section>}
     {!selectionOnly&&gesturePosition&&<section className="map-action-panel" role="dialog" aria-label="Chọn thao tác tại điểm trên bản đồ"><header className="map-panel-header"><div><strong>Chọn thao tác</strong><small>{gesturePosition.lat.toFixed(6)}, {gesturePosition.lng.toFixed(6)}</small></div><button className="icon-button" type="button" aria-label="Đóng chọn thao tác" onClick={()=>setGesturePosition(null)}><X size={18}/></button></header><p>Chọn cách ghi nhận vị trí hoặc bắt đầu đo trên bản đồ.</p><div className="map-action-options"><button type="button" className="button primary" onClick={()=>{setCandidate({position:gesturePosition});setGesturePosition(null);}}><MousePointer2 size={17}/>Chọn điểm này</button><button type="button" className="button secondary" onClick={()=>beginMeasurement('line')}><Ruler size={17}/>Đo đoạn thẳng</button><button type="button" className="button secondary" onClick={()=>beginMeasurement('area')}><Pentagon size={17}/>Đo diện tích</button></div></section>}
-    {!selectionOnly&&measureMode&&<section className="map-action-panel map-measure-panel" role="region" aria-label={measureMode==='line'?'Đo đoạn thẳng':'Đo diện tích'}><header className="map-panel-header"><div><strong>{measureMode==='line'?'Đang đo đoạn thẳng':'Đang vẽ khu vực'}</strong><small>{measurePoints.length?'Chạm/click các đỉnh tiếp theo trên bản đồ.':'Chọn điểm đầu tiên trên bản đồ rồi thêm các điểm tiếp theo.'}</small></div><button className="icon-button" type="button" aria-label="Thoát khỏi lệnh vẽ" title="Thoát khỏi lệnh vẽ" onClick={clearMeasurement}><X size={18}/></button></header><p>{measureMode==='line'?`Đã có ${measurePoints.length} điểm · ${formatDistance(measuredDistance)}`:`Đã có ${measurePoints.length} đỉnh${measurePoints.length>=3?` · khoảng ${formatArea(measuredArea)}`:''}`}</p><div className="map-action-options"><button type="button" className="button primary" disabled={measurePoints.length<(measureMode==='line'?2:3)} onClick={finishMeasurement}><Check size={17}/>{measureMode==='line'?'Kết thúc đo':'Hoàn tất diện tích'}</button><button type="button" className="button secondary" onClick={clearMeasurement}>Hủy phép đo</button></div><small className="map-panel-note">Esc hoặc nút × để thoát khỏi lệnh vẽ.</small></section>}
+    {!selectionOnly&&measureMode&&<section className="map-action-panel map-measure-panel" role="region" aria-label={measureMode==='line'?'Đo đoạn thẳng':'Đo diện tích'}><header className="map-panel-header"><div><strong>{measureMode==='line'?'Đang đo đoạn thẳng':'Đang vẽ khu vực'}</strong><small>{measurePoints.length?'Chạm/click các đỉnh tiếp theo (tối đa 200 điểm).':'Chọn điểm đầu tiên trên bản đồ rồi thêm các điểm tiếp theo.'}</small></div><button className="icon-button" type="button" aria-label="Thoát khỏi lệnh vẽ" title="Thoát khỏi lệnh vẽ" onClick={clearMeasurement}><X size={18}/></button></header><p>{measureMode==='line'?`Đã có ${measurePoints.length} điểm · ${formatDistance(measuredDistance)}`:`Đã có ${measurePoints.length} đỉnh${measurePoints.length>=3?` · khoảng ${formatArea(measuredArea)}`:''}`}</p><div className="map-action-options"><button type="button" className="button primary" disabled={measurePoints.length<(measureMode==='line'?2:3)} onClick={finishMeasurement}><Check size={17}/>{measureMode==='line'?'Kết thúc đo':'Hoàn tất diện tích'}</button><button type="button" className="button secondary" onClick={clearMeasurement}>Hủy phép đo</button></div><small className="map-panel-note">Esc hoặc nút × để thoát khỏi lệnh vẽ.</small></section>}
     {candidate&&<section className="map-candidate-card" role="status"><header className="map-panel-header"><strong>{candidateCommune?.name||'Điểm ngoài địa bàn hoặc sát ranh giới cần kiểm tra'}</strong><button className="icon-button" type="button" aria-label="Đóng điểm đang chọn" onClick={()=>setCandidate(null)}><X size={17}/></button></header><span>{candidate.position.lat.toFixed(6)}, {candidate.position.lng.toFixed(6)}</span>{candidate.accuracy!==undefined&&<small>Sai số vị trí thiết bị khoảng {Math.round(candidate.accuracy)} m. {candidate.accuracy>100?'Sai số lớn, hãy điều chỉnh ghim trước khi xác nhận.':'Hãy kiểm tra đây là vị trí công trình.'}</small>}<small>Kéo ghim để chỉnh điểm. Địa bàn gợi ý được máy chủ kiểm tra lại khi lưu.</small><div><button type="button" className="button primary" disabled={!candidateCommune} onClick={confirmCandidate}>Dùng điểm này</button><button type="button" className="button secondary" onClick={()=>{gpsRequest.current++;setLocating(false);setCandidate(null);}}>Hủy chọn điểm</button></div></section>}
     {!selectionOnly&&workflowPosition&&workflowRole&&<section className="map-action-panel map-workflow-panel" role="region" aria-label="Chọn nghiệp vụ tại vị trí đã chọn"><header className="map-panel-header"><div><strong>Điểm đã xác nhận</strong><small>{resolveCommune(workflowPosition)?.name||'Kiểm tra lại xã/phường'}</small></div><button className="icon-button" type="button" aria-label="Đóng lựa chọn nghiệp vụ" onClick={()=>setWorkflowPosition(null)}><X size={18}/></button></header><p>{workflowPosition.lat.toFixed(6)}, {workflowPosition.lng.toFixed(6)}{measurementFinished?measurementType==='line'?` · Đoạn thẳng ${formatDistance(measuredDistance)}`:` · Diện tích khoảng ${formatArea(measuredArea)}`:''}</p><div className="map-action-options">{workflowRole==='citizen'?<button type="button" className="button primary" onClick={()=>chooseWorkflowAction('report')}><MapPin size={17}/>Gửi phản ánh tại đây</button>:<><button type="button" className="button secondary" onClick={()=>chooseWorkflowAction('inspect')}><Check size={17}/>Ghi nhận kiểm tra</button><button type="button" className="button primary" onClick={()=>chooseWorkflowAction('permit')}><MapPin size={17}/>Nhập GPXD tại đây</button></>}</div><small className="map-panel-note">Hồ sơ gắn tại điểm bắt đầu thao tác. Đường đo và diện tích là số liệu tham khảo trên bản đồ.</small></section>}
-    {!selectionOnly&&measurementFinished&&measurementType&&<section className="map-measurement-card" role="status"><button className="icon-button" type="button" aria-label="Xóa kết quả đo" title="Xóa kết quả đo" onClick={clearMeasurement}><X size={16}/></button><strong>{measurementType==='line'?`Độ dài: ${formatDistance(measuredDistance)}`:`Diện tích ước tính: ${formatArea(measuredArea)}`}</strong><small>Phép đo tham khảo, chưa lưu vào hồ sơ.</small></section>}
+    {!selectionOnly&&!selectedRecordId&&measurementFinished&&measurementType&&<section className="map-measurement-card" role="status"><button className="icon-button" type="button" aria-label="Xóa kết quả đo" title="Xóa kết quả đo" onClick={clearMeasurement}><X size={16}/></button><strong>{measurementType==='line'?`Độ dài: ${formatDistance(measuredDistance)}`:`Diện tích ước tính: ${formatArea(measuredArea)}`}</strong><small>Phép đo tham khảo; sẽ lưu cùng hồ sơ khi gửi biểu mẫu.</small></section>}
     {locationMessage&&<div className="map-source-notice" role="alert"><span>{locationMessage}</span><button type="button" className="icon-button" aria-label="Đóng thông báo vị trí" onClick={()=>setLocationMessage('')}><X size={16}/></button></div>}
     {activeBase.startsWith('google-') && <div className="map-provider-credit map-google-credit"><img src="/google-maps-logo.svg" alt="Google Maps" height={18} /><span>{copyright}</span></div>}
     {(!ready || !rendered) && !error && <div className="map-loading" style={{ position: 'absolute', top: 16, left: 16, background: 'white', padding: '10px 14px', borderRadius: 8 }}>Đang mở bản đồ…</div>}

@@ -28,3 +28,34 @@ test('shared cloud/local source derivation never promotes demo or unknown links 
 test('SQLite linked demo and unknown inspections inherit conservative source in payload and metadata',()=>{const demo=store.insertReport({...input,title:'linked demo source'});store.updateRecordSource('report',demo.id,'demo',1);const unknown=store.insertReport({...input,title:'linked unknown source'});store.updateRecordSource('report',unknown.id,'unknown',1);const x:InspectionInput={siteKey:'SOURCE-QA',address:'Địa chỉ thử',communeCode:input.communeCode,lat:input.lat,lng:input.lng,inspectionDate:'2026-09-01',inspector:'Cán bộ thử',result:'unverified',verified:false,basis:'',notes:''};const a=store.insertInspection({...x,reportId:demo.id});const b=store.insertInspection({...x,reportId:unknown.id});assert.equal(a.source,'demo');assert.equal(b.source,'unknown');const db=new DatabaseSync(join(process.env.TTXD_DATA_DIR!,'ttxd.sqlite'));assert.equal(JSON.parse(db.prepare('SELECT metadata FROM record_metadata WHERE id=?').get(a.id)?.metadata as string).source,'demo');assert.equal(JSON.parse(db.prepare('SELECT metadata FROM record_metadata WHERE id=?').get(b.id)?.metadata as string).source,'unknown');db.close();});
 
 test('cloud adapter forwards inherited demo/unknown source in the encrypted RPC payload and metadata',async()=>{const cloud=await import('../lib/cloud-store');const originalFetch=globalThis.fetch;const saved={SUPABASE_URL:process.env.SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY,TTXD_ENCRYPTION_KEY:process.env.TTXD_ENCRYPTION_KEY};const secret=Buffer.alloc(32,17);process.env.SUPABASE_URL='https://synthetic-qa.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='synthetic-key-never-real';process.env.TTXD_ENCRYPTION_KEY=secret.toString('base64');let source:'demo'|'unknown'='demo';const envelopes=(value:unknown)=>{const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',secret,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return JSON.stringify({version:1,ciphertext:[iv,cipher.getAuthTag(),encrypted].map(b=>b.toString('base64')).join('.')});};let writes=0;globalThis.fetch=async(url,options)=>{const target=String(url);if(target.includes('/ttxd_reports?'))return new Response(JSON.stringify({payload:envelopes({...input,id:randomUUID(),source})}),{status:200,headers:{'Content-Type':'application/json'}});if(target.includes('/rpc/ttxd_write_record')){const body=JSON.parse(String(options?.body));assert.equal(body.p_metadata.source,source);assert.equal(cloud.decodeEnvelope<{source:string}>(body.p_payload).source,source);writes++;return new Response(JSON.stringify(body.p_payload),{status:200,headers:{'Content-Type':'application/json'}});}throw new Error('Unexpected network call in synthetic cloud QA');};try{const x:InspectionInput={reportId:randomUUID(),siteKey:'CLOUD-SOURCE-QA',address:'Địa chỉ thử',communeCode:input.communeCode,lat:input.lat,lng:input.lng,inspectionDate:'2026-09-01',inspector:'Cán bộ thử',result:'unverified',verified:false,basis:'',notes:''};assert.equal((await cloud.insertInspection(x)).source,'demo');source='unknown';assert.equal((await cloud.insertInspection(x)).source,'unknown');assert.equal(writes,2);}finally{globalThis.fetch=originalFetch;for(const[k,v]of Object.entries(saved)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}});
+
+test('SQLite persists user geometry in encrypted payload and retains it through status updates',()=>{
+ const measurement={type:'area' as const,points:[{lat:21,lng:104},{lat:21.001,lng:104},{lat:21,lng:104.001}]};
+ const saved=store.insertReport({...input,title:'Geometry QA',measurement});
+ assert.deepEqual(store.listRecords().reports.find(record=>record.id===saved.id)?.measurement,measurement);
+ assert.deepEqual(store.listPublicMapRecords().find(record=>record.id===saved.id)?.measurement,measurement);
+ const updated=store.updateReportStatus({id:saved.id,version:1,status:'processing',reason:'Geometry QA',result:''});
+ assert.deepEqual(updated.measurement,measurement);
+ const db=new DatabaseSync(join(process.env.TTXD_DATA_DIR!,'ttxd.sqlite'));
+ const row=db.prepare('SELECT payload FROM reports WHERE id=?').get(saved.id)!;
+ assert.equal((row.payload as string).includes('points'),false);db.close();
+});
+
+test('cloud insertion encrypts measurement with business record without exposing geometry in metadata',async()=>{
+ const cloud=await import('../lib/cloud-store');
+ const originalFetch=globalThis.fetch;
+ const saved={SUPABASE_URL:process.env.SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY,TTXD_ENCRYPTION_KEY:process.env.TTXD_ENCRYPTION_KEY};
+ process.env.SUPABASE_URL='https://synthetic-measurement.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='synthetic-measurement-key';process.env.TTXD_ENCRYPTION_KEY=Buffer.alloc(32,23).toString('base64');
+ const measurement={type:'line' as const,points:[{lat:21,lng:104},{lat:21.001,lng:104.001}]};
+ let writes=0;
+ globalThis.fetch=async(url,options)=>{
+  assert.match(String(url),/rpc\/ttxd_write_record/);
+  const body=JSON.parse(String(options?.body));
+  assert.deepEqual(cloud.decodeEnvelope<ReportInput>(body.p_payload).measurement,measurement);
+  assert.equal(body.p_metadata.measurement,undefined);assert.equal(String(body.p_payload).includes('points'),false);
+  writes++;
+  return new Response(JSON.stringify(body.p_payload),{status:200,headers:{'Content-Type':'application/json'}});
+ };
+ try{const record=await cloud.insertReport({...input,measurement});assert.deepEqual(record.measurement,measurement);assert.equal(writes,1);}
+ finally{globalThis.fetch=originalFetch;for(const[key,value]of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
+});

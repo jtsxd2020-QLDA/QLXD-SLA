@@ -1,3 +1,4 @@
+import {publicMeasurement} from './record-measurement';
 import {WorkflowError,statusRecord,permitProgressRecord,metadata,inspectionSource} from './workflow';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, existsSync, readFileSync, writeFileSync, chmodSync, statSync } from 'node:fs';
@@ -100,8 +101,8 @@ export function listRecords(includeDeleted=false) {
 export function listPublicMapRecords() {
   const {permits,reports}=listRecords();
   return [
-    ...permits.map(record=>({id:record.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:record.permitNumber,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:'active',constructionStatus:record.constructionStatus||'uninspected'})),
-    ...reports.map(record=>({id:record.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:record.publicCode,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:record.status}))
+    ...permits.map(record=>({...publicMeasurement(record),id:record.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:record.permitNumber,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:'active',constructionStatus:record.constructionStatus||'uninspected'})),
+    ...reports.map(record=>({...publicMeasurement(record),id:record.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:record.publicCode,communeCode:record.communeCode,lat:record.lat,lng:record.lng,status:record.status}))
   ];
 }
 

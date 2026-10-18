@@ -1,21 +1,22 @@
 export type Position = { lat: number; lng: number };
+export type RecordMeasurement = { type: 'line' | 'area'; points: Position[] };
 export type Commune = { code: string; name: string; type: string };
 export type ConstructionStatus = 'uninspected' | 'under_construction' | 'completed';
 export type ConstructionStatusEvent = { at: string; actor: string; from: ConstructionStatus; to: ConstructionStatus };
 export type PermitInput = {
   permitNumber: string; issueDate: string; issuingAuthority: string;
   investorName: string; investorPhone?: string; projectName: string; address: string; communeCode: string;
-  lat: number; lng: number; area: number; floors: number;
+  lat: number; lng: number; measurement?: RecordMeasurement; area: number; floors: number;
   constructionType: 'new' | 'renovation'; notes: string; constructionStatus?: ConstructionStatus;
 };
 export type ReportInput = {
   title: string; content: string; category: 'unlicensed' | 'wrong_permit' | 'safety' | 'other';
   reporterName: string; reporterPhone: string; address: string; communeCode: string;
-  lat: number; lng: number;
+  lat: number; lng: number; measurement?: RecordMeasurement;
 };
 export type Permit = PermitInput & { id: string; createdAt: string; status: 'active'; source?:DataSource; version?:number; progressHistory?:ConstructionStatusEvent[]; deletedAt?:string; deletedBy?:string };
 export type CitizenReport = ReportInput & { id: string; publicCode: string; createdAt: string; status: 'received' | 'processing' | 'resolved'; source?:DataSource; version?:number; history?:StatusEvent[]; historyStartedAt?:string; result?:string; completedAt?:string; deletedAt?:string; deletedBy?:string };
-export type MapRecord = { id: string; kind: 'permit' | 'report'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string; constructionStatus?:ConstructionStatus };
+export type MapRecord = { id: string; kind: 'permit' | 'report'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string; constructionStatus?:ConstructionStatus; measurement?:RecordMeasurement };
 export type RecordsResponse = { permits: Permit[]; reports: CitizenReport[] };
 export type ApiResult<T> = { data: T } | { error: string; fields?: Record<string, string> };
 export type SessionInfo = { authenticated: boolean; mode: 'citizen'|'admin'; csrfToken?: string; email?: string };

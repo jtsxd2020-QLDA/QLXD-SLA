@@ -1,3 +1,4 @@
+import {publicMeasurement} from './record-measurement';
 import * as cloud from './cloud-store';
 import type {PermitInput,ReportInput,MapRecord,Idempotency,StatusInput,PermitProgressInput,InspectionInput,AnalyticsSnapshot,RecordLifecycleInput,RecordKind} from './types';
 import {WorkflowError} from './workflow';
@@ -11,7 +12,7 @@ export async function deleteAdminSession(token:string){return(await backend()).d
 export async function listRecords(includeDeleted=false){return(await backend()).listRecords(includeDeleted);}
 export async function insertPermit(input:PermitInput,request?:Idempotency){return(await backend()).insertPermit(input,request);}
 export async function insertReport(input:ReportInput,request?:Idempotency){return(await backend()).insertReport(input,request);}
-export async function listPublicMapRecords():Promise<MapRecord[]>{const {permits,reports}=await listRecords();return[...permits.map(r=>({id:r.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:r.permitNumber,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status,constructionStatus:r.constructionStatus||'uninspected'})),...reports.map(r=>({id:r.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:r.publicCode,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status}))];}
+export async function listPublicMapRecords():Promise<MapRecord[]>{const {permits,reports}=await listRecords();return[...permits.map(r=>({...publicMeasurement(r),id:r.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:r.permitNumber,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status,constructionStatus:r.constructionStatus||'uninspected'})),...reports.map(r=>({...publicMeasurement(r),id:r.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:r.publicCode,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status}))];}
 export const consumeCloudRateLimit=cloud.consumeRateLimit;
 
 export async function listInspections(includeDeleted=false){return(await backend()).listInspections(includeDeleted);}

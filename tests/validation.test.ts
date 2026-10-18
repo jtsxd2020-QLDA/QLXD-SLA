@@ -31,3 +31,24 @@ test('boundary provenance preserves original and discloses repair and reference-
  assert.equal(provenance.count,75);assert.equal(provenance.invalidSourceGeometryCount,1);assert.equal(provenance.normalizationRepairs[0].code,'03760');assert.match(provenance.status,/chưa xác nhận/);
  const source=JSON.parse(readFileSync(new URL('../geodata/source-original.geojson',import.meta.url),'utf8'));assert.equal(source.features.length,75);
 });
+
+test('user-drawn geometry is optional, bounded, strict and confined to province',()=>{
+ const anchor={lat:location!.lat,lng:location!.lng};
+ const nearby={lat:anchor.lat+0.000001,lng:anchor.lng+0.000001};
+ const third={lat:anchor.lat,lng:anchor.lng+0.000002};
+ const line={type:'line',points:[anchor,nearby]};
+ const area={type:'area',points:[anchor,nearby,third]};
+ assert.deepEqual(validatePermit({...permit,measurement:line}).measurement,line);
+ assert.deepEqual(validateReport({...report,measurement:area}).measurement,area);
+ assert.equal(validatePermit(permit).measurement,undefined);
+ for(const measurement of [null,{type:'line',points:[anchor]},{type:'area',points:[anchor,nearby]}, {type:'line',points:Array.from({length:201},()=>anchor)}, {type:'line',points:[anchor,{lat:NaN,lng:104}]}, {type:'line',points:[anchor,{lat:0,lng:0}]}, {type:'line',points:[anchor,anchor]}, {...line,area:123}, {type:'line',points:[anchor,{...nearby,secret:'private'}]}]) invalid({...permit,measurement});
+});
+
+test('saved geometry must start at record location, allowing only tiny rounding tolerance',()=>{
+ const anchor={lat:location!.lat,lng:location!.lng};
+ const nearby={lat:anchor.lat+0.000001,lng:anchor.lng+0.000001};
+ const measurement={type:'line',points:[anchor,nearby]};
+ assert.deepEqual(validatePermit({...permit,lat:anchor.lat+0.00000005,measurement}).measurement,measurement);
+ invalid({...permit,measurement:{type:'line',points:[nearby,anchor]}});
+ invalid({...report,measurement:{type:'line',points:[nearby,anchor]}},'report');
+});

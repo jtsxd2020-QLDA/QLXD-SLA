@@ -180,3 +180,28 @@
 .commune-ranking-empty{margin:12px 0 2px;font-size:11px}
 @media(max-width:1100px){.search-form{min-width:100%}}
 @media(max-width:760px){.search-form{width:100%;min-width:0;flex-basis:100%;gap:6px}.search-submit{padding:9px 10px;font-size:11px}.search-clear{padding:9px 10px;font-size:11px}.search-suggestions{max-height:45dvh}.commune-ranking-grid{grid-template-columns:1fr}.commune-ranking-card{padding:14px}.commune-ranking-row{grid-template-columns:minmax(100px,1fr) minmax(70px,1.2fr) 34px}}
+
+/* Keep the selected construction visible: details occupy their own column. */
+.map-layout.has-record-detail{display:grid;grid-template-columns:minmax(0,1fr) clamp(235px,29%,310px);align-items:stretch;gap:10px;overflow:visible}
+.map-layout.has-record-detail>.map-canvas-shell{min-width:0;overflow:hidden;border-radius:8px}
+.map-layout.has-record-detail .detail-panel,.citizen-map.has-record-detail .citizen-record-card{position:relative;inset:auto;width:100%;min-width:0;max-height:530px;margin:0;box-shadow:none;border:1px solid var(--line);border-radius:8px;padding:16px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.record-detail-panel .eyebrow{padding-right:28px;font-size:9px}.record-detail-panel h3{font-size:15px;line-height:1.45;margin:8px 0}.record-detail-panel .detail-close,.citizen-record-card>.icon-button{top:5px;right:5px;min-height:36px;min-width:36px}.record-detail-panel dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px 10px;padding-top:14px}.record-detail-panel dt,.record-detail-panel dd{margin:0;font-size:11px;line-height:1.5}.record-detail-panel dt{color:var(--muted)}.record-detail-panel .detail-actions{gap:6px;margin-top:12px}.record-detail-panel .detail-actions .button{white-space:normal;min-height:40px}.record-detail-panel .permit-progress-control form{grid-template-columns:1fr}.record-detail-toggle{display:none}.record-measurement{display:grid;gap:7px;padding:12px;margin-top:14px;border:1px solid #b9d5f7;border-radius:8px;background:#f0f7ff;font-size:12px}.record-measurement strong{display:flex;align-items:center;gap:6px;color:#285d9d}.record-measurement b{font-size:21px;color:#174a86}.record-measurement small{font-size:10px;line-height:1.6;color:var(--muted)}.record-measurement.empty{border-color:var(--line);background:#f7f9fc;color:var(--muted)}
+.citizen-map.has-record-detail{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:10px;min-height:480px}.citizen-map.has-record-detail>.map-canvas-shell{position:relative!important;inset:auto;min-width:0;min-height:480px!important;border-radius:8px;overflow:hidden}.citizen-map.has-record-detail .citizen-record-card{max-height:480px}.citizen-record-card h2{overflow-wrap:anywhere;padding-right:12px}
+.has-record-detail .map-quick-controls{left:12px;top:61px;max-width:calc(100% - 70px);gap:4px}.has-record-detail .map-quick-controls button{min-height:36px;height:auto;padding:7px 8px;font-size:10px}.has-record-detail .map-position-tools{top:150px}.has-record-detail .map-measurement-card{top:150px}.has-record-detail .map-draw-tools{top:150px}.has-record-detail .map-tools-popover{max-height:calc(100% - 70px);overflow:auto}
+@media(min-width:1500px){.map-layout.has-record-detail .detail-panel{max-height:640px}}
+@media(max-width:760px){
+ .map-layout.has-record-detail,.citizen-map.has-record-detail{display:flex;flex-direction:column;gap:8px;height:auto;min-height:0;overflow:visible;background:transparent}
+ .map-layout.has-record-detail>.map-canvas-shell{height:500px;min-height:500px;flex:none}
+ .citizen-map.has-record-detail>.map-canvas-shell{height:440px;min-height:440px!important;flex:none}
+ .map-layout.has-record-detail .detail-panel,.citizen-map.has-record-detail .citizen-record-card,.map-layout:has(.map-google-credit).has-record-detail .detail-panel{inset:auto;flex:none;width:100%;max-height:210px;min-height:0;padding:14px;overflow:auto}
+ .map-layout.has-record-detail .detail-panel.is-expanded,.citizen-map.has-record-detail .citizen-record-card.is-expanded{max-height:min(65dvh,520px)}
+ .record-detail-toggle{display:inline-flex;min-height:36px;padding:6px 0;margin:0 0 5px}.record-detail-panel dl{grid-template-columns:90px minmax(0,1fr);padding-top:10px}.record-detail-panel .status-badge{margin-bottom:4px}.record-detail-panel .detail-close,.citizen-record-card>.icon-button{min-height:40px;min-width:40px}.has-record-detail .map-position-tools,.has-record-detail .map-draw-tools{top:150px}.record-detail-panel .record-measurement{margin-top:10px}
+}
+.record-detail-panel>.icon-button{position:sticky;top:0;float:right;z-index:2;background:white;margin:-5px -5px 0 0}
+@media(max-width:760px){.has-record-detail .map-quick-controls button{min-height:44px}.has-record-detail .map-position-tools,.has-record-detail .map-draw-tools,.has-record-detail .map-measurement-card{top:165px}}
+
+/* Pulse the location halo only; the pin and its geographic anchor stay still. */
+.map-record-marker.selected::before{content:"";position:absolute;left:50%;top:39px;width:18px;height:12px;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;background:#2862b74d;box-shadow:0 0 0 2px #1d3a6e99;pointer-events:none;animation:map-selected-location-pulse 1.8s ease-out infinite}
+.map-record-marker.selected .map-marker-pin{z-index:1}
+@keyframes map-selected-location-pulse{0%{box-shadow:0 0 0 2px #1d3a6eb3,0 0 0 0 #3b82f699;opacity:1}75%,100%{box-shadow:0 0 0 2px #1d3a6e80,0 0 0 17px #3b82f600;opacity:.45}}
+@media(prefers-reduced-motion:reduce){.map-record-marker.selected::before{animation:none;opacity:1;box-shadow:0 0 0 2px #1d3a6e99,0 0 0 8px #3b82f633}}
