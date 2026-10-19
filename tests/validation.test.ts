@@ -52,3 +52,10 @@ test('saved geometry must start at record location, allowing only tiny rounding 
  invalid({...permit,measurement:{type:'line',points:[nearby,anchor]}});
  invalid({...report,measurement:{type:'line',points:[nearby,anchor]}},'report');
 });
+
+test('not-started is an explicit construction state distinct from legacy uninspected',()=>{
+ assert.equal(validatePermit({...permit,constructionStatus:'not_started'}).constructionStatus,'not_started');
+ assert.equal(validatePermit(permit).constructionStatus,'uninspected');
+ assert.equal(validatePermitProgress({id:'00000000-0000-4000-8000-000000000001',version:1,constructionStatus:'not_started'}).constructionStatus,'not_started');
+ invalid({...permit,constructionStatus:'not_deployed'});
+});

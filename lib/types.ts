@@ -1,7 +1,7 @@
 export type Position = { lat: number; lng: number };
 export type RecordMeasurement = { type: 'line' | 'area'; points: Position[] };
 export type Commune = { code: string; name: string; type: string };
-export type ConstructionStatus = 'uninspected' | 'under_construction' | 'completed';
+export type ConstructionStatus = 'uninspected' | 'not_started' | 'under_construction' | 'completed';
 export type ConstructionStatusEvent = { at: string; actor: string; from: ConstructionStatus; to: ConstructionStatus };
 export type PermitInput = {
   permitNumber: string; issueDate: string; issuingAuthority: string;

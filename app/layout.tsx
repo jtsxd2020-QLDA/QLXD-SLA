@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import { APP_NAME } from '@/lib/app-branding';
 import './globals.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 export const metadata: Metadata = {
-  title: 'Quản lý trật tự xây dựng · Sơn La',
-  description: 'Bản đầu quản lý GPXD và phản ánh trên bản đồ tỉnh Sơn La.',
+  title: APP_NAME,
+  description: APP_NAME,
   robots: { index: false, follow: false },
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {

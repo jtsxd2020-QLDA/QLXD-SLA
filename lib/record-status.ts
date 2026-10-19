@@ -2,12 +2,13 @@ import type { ConstructionStatus } from './types';
 
 export const constructionStatusOptions: { value: ConstructionStatus; label: string }[] = [
   { value: 'uninspected', label: 'Chưa kiểm tra' },
+  { value: 'not_started', label: 'Chưa thi công' },
   { value: 'under_construction', label: 'Đang thi công' },
   { value: 'completed', label: 'Đã hoàn thành' },
 ];
 
 export function getConstructionStatus(value?: string): ConstructionStatus {
-  return value === 'under_construction' || value === 'completed' ? value : 'uninspected';
+  return value === 'not_started' || value === 'under_construction' || value === 'completed' ? value : 'uninspected';
 }
 
 export function constructionStatusLabel(value?: string): string {

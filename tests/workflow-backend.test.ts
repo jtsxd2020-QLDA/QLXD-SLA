@@ -59,3 +59,22 @@ test('cloud insertion encrypts measurement with business record without exposing
  try{const record=await cloud.insertReport({...input,measurement});assert.deepEqual(record.measurement,measurement);assert.equal(writes,1);}
  finally{globalThis.fetch=originalFetch;for(const[key,value]of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 });
+
+test('explicit not-started persists encrypted and public state without changing legacy defaults',()=>{
+ const input={permitNumber:'NOT-STARTED-QA',issueDate:'2026-10-10',issuingAuthority:'Cơ quan thử',investorName:'Chủ đầu tư thử',projectName:'Công trình chưa thi công',address:'Vị trí thử',communeCode:'04000',lat:21,lng:104,area:90,floors:2,constructionType:'new' as const,notes:''};
+ const permit=store.insertPermit({...input,constructionStatus:'not_started'});
+ assert.equal(store.listRecords().permits.find(record=>record.id===permit.id)?.constructionStatus,'not_started');
+ const publicRecord=store.listPublicMapRecords().find(record=>record.id===permit.id);
+ assert.equal(publicRecord?.kind,'permit');
+ if(publicRecord?.kind==='permit')assert.equal(publicRecord.constructionStatus,'not_started');
+ const updated=store.updatePermitProgress({id:permit.id,version:1,constructionStatus:'under_construction'});
+ assert.equal(updated.progressHistory?.[0].from,'not_started');
+ const legacy=store.insertPermit({...input,permitNumber:'UNKNOWN-START-QA'});
+ assert.equal(legacy.constructionStatus,'uninspected');
+ const recorded=store.updatePermitProgress({id:legacy.id,version:1,constructionStatus:'not_started'});
+ assert.equal(recorded.progressHistory?.[0].from,'uninspected');
+ assert.equal(recorded.constructionStatus,'not_started');
+ const db=new DatabaseSync(join(process.env.TTXD_DATA_DIR!,'ttxd.sqlite'));
+ const metadata=db.prepare('SELECT metadata FROM record_metadata WHERE id=?').get(legacy.id)!;
+ assert.equal(JSON.parse(String(metadata.metadata)).constructionStatus,'not_started');db.close();
+});
