@@ -60,7 +60,7 @@ test('cloud insertion encrypts measurement with business record without exposing
  finally{globalThis.fetch=originalFetch;for(const[key,value]of Object.entries(saved)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 });
 
-test('explicit not-started persists encrypted and public state without changing legacy defaults',()=>{
+test('compatibility not-started raw storage survives encrypted and public roundtrip without rewriting existing status values',()=>{
  const input={permitNumber:'NOT-STARTED-QA',issueDate:'2026-10-10',issuingAuthority:'Cơ quan thử',investorName:'Chủ đầu tư thử',projectName:'Công trình chưa thi công',address:'Vị trí thử',communeCode:'04000',lat:21,lng:104,area:90,floors:2,constructionType:'new' as const,notes:''};
  const permit=store.insertPermit({...input,constructionStatus:'not_started'});
  assert.equal(store.listRecords().permits.find(record=>record.id===permit.id)?.constructionStatus,'not_started');

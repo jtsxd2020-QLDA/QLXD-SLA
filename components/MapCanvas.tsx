@@ -10,17 +10,19 @@ import type { MapRecord, Position, RecordMeasurement } from '@/lib/types';
 import { formatArea, formatDistance, measureLineMeters, measurePolygonAreaSquareMeters } from '@/lib/map-measurement';
 import { BASEMAPS, GOOGLE_MAPS_KEY, GOOGLE_HYBRID_SOURCE, REFERENCE_SOURCES, googleCopyright, resolveBasemap, type BasemapId } from '@/lib/basemaps';
 import { constructionStatusLabel, getConstructionStatus, reportStatusLabel } from '@/lib/record-status';
+import type { InspectionLoadState } from '@/lib/inspection-status';
 
 type MeasurementType = 'line' | 'area';
 type WorkflowAction = 'report' | 'inspect' | 'permit';
 type Props = {
+  inspectionCounts?: ReadonlyMap<string, number>; inspectionState?: InspectionLoadState;
   records: MapRecord[]; selectedCommune: string; onPick: (point: Position, measurement?: RecordMeasurement) => void;
   onSelect: (record: MapRecord) => void; picked: Position | null; selectedRecordId?: string; onCommuneNavigate?: (code:string)=>void;
   workflowRole?: 'citizen' | 'admin'; selectionOnly?: boolean; onMeasurementClear?:()=>void;
   onWorkflowAction?: (action: WorkflowAction, point: Position, measurement?: RecordMeasurement) => void;
 };
 
-export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction, onMeasurementClear }: Props) {
+export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction, onMeasurementClear, inspectionCounts, inspectionState }: Props) {
   const [candidate,setCandidate]=useState<{position:Position;accuracy?:number}|null>(null);
   const [locating,setLocating]=useState(false);
   const [locationMessage,setLocationMessage]=useState('');
@@ -414,11 +416,22 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
         const bubble=document.createElementNS(svgNamespace,'path');bubble.setAttribute('d','M21 11.5a8.5 8.5 0 0 1-12.8 7.3L3 21l1.6-4.8A8.5 8.5 0 1 1 21 11.5zM8 11.5h.01M12 11.5h.01M16 11.5h.01');icon.append(bubble);
       }
       const pin=document.createElement('span');pin.className='map-marker-pin';pin.append(icon);button.append(pin);
+      if(workflowRole==='admin'&&inspectionState){
+        const count=inspectionState==='ready'?(inspectionCounts?.get(`${record.kind}:${record.id}`)??0):0;
+        const label=inspectionState==='loading'?'Đang tải kiểm tra':inspectionState==='error'?'Chưa xác minh được kiểm tra':count?`Đã ghi nhận kiểm tra: ${count} lượt`:'Chưa có bản ghi kiểm tra';
+        button.dataset.inspection=inspectionState==='ready'?(count?'recorded':'unrecorded'):inspectionState;
+        button.setAttribute('aria-label',`${button.getAttribute('aria-label')} · ${label}`);
+        button.title+=` · ${label}`;
+        const indicator=document.createElement('span');
+        indicator.className=`map-inspection-indicator ${button.dataset.inspection}`;
+        indicator.textContent=inspectionState==='loading'?'…':count?'✓':'?';
+        indicator.setAttribute('aria-hidden','true');button.append(indicator);
+      }
       button.addEventListener('click', (event) => { event.stopPropagation();clearMeasurement();setCandidate(null);setGesturePosition(null);setWorkflowPosition(null);setDrawToolsOpen(false);setPositionToolsOpen(false);handlers.current.onSelect(record); });
       return new maplibregl.Marker({ element: button, anchor: 'bottom' }).setLngLat([record.lng, record.lat]).addTo(instance);
     });
     return () => { markers.current.forEach((marker) => marker.remove()); };
-  }, [records, ready, selectedRecordId]);
+  }, [records, ready, selectedRecordId, inspectionCounts, inspectionState, workflowRole]);
 
   useEffect(() => {
     const instance = map.current;

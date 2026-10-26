@@ -28,7 +28,7 @@ export default function PermitProgressControl({permit,csrfToken,onSaved}:{permit
       <label className="field">Trạng thái theo ghi nhận hiện trường<select aria-label="Tình trạng công trình" value={value} disabled={pending} onChange={event=>setValue(event.target.value as ConstructionStatus)}>{constructionStatusOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <button className="button secondary small" type="submit" disabled={pending||value===current}><Save size={15}/>{pending?'Đang lưu…':'Lưu trạng thái'}</button>
     </form>
-    {last?<small>Cập nhật gần nhất: {constructionStatusLabel(last.to)} · {new Date(last.at).toLocaleString('vi-VN')}</small>:<small>Hồ sơ cũ mặc định “Chưa kiểm tra” cho đến khi có ghi nhận.</small>}
+    {last?<small>Cập nhật gần nhất: {constructionStatusLabel(last.to)} · {new Date(last.at).toLocaleString('vi-VN')}</small>:<small>Hồ sơ cũ mặc định “Chưa thi công” cho đến khi có ghi nhận.</small>}
     {error?<p className="field-error" role="alert">{error}</p>:null}
   </section>;
 }
