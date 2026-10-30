@@ -47,7 +47,7 @@ test('history uses inspection date first, then recorded time and ID for stable o
 test('result text distinguishes verified findings from records that still need verification',()=>{
   assert.equal(inspectionResultLabel(inspection({result:'compliant',verified:true})),'Phù hợp nội dung GPXD');
   assert.equal(inspectionResultLabel(inspection({result:'wrong_permit',verified:true})),'Sai nội dung GPXD');
-  assert.equal(inspectionResultLabel(inspection({result:'no_permit_presented',verified:true})),'Chưa xuất trình GPXD, cần xác minh');
+  assert.equal(inspectionResultLabel(inspection({result:'no_permit_presented',verified:true})),'Chưa xuất trình GPXD · cần xác minh');
   assert.equal(inspectionResultLabel(inspection({result:'unverified',verified:true})),'Chưa đủ cơ sở xác minh');
   assert.equal(inspectionResultLabel(inspection({result:'compliant',verified:false})),'Chưa đủ cơ sở xác minh');
 });

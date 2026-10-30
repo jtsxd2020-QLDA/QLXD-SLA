@@ -59,7 +59,9 @@ export async function createManagedAccount(input:AccountInput){
 }
 export async function updateManagedAccount(input:AccountUpdateInput){
  const value=validateAccountUpdate(input);
- const {data,error}=await db().from('ttxd_admin_users').update({role:value.role,commune_code:value.communeCode,active:value.active}).eq('email',value.email).select('email,role,commune_code,active,created_at').maybeSingle();
+ const salt=value.password?randomBytes(16).toString('hex'):undefined;
+ const passwordHash=value.password&&salt?scryptSync(value.password,salt,64).toString('hex'):undefined;
+ const {data,error}=await db().from('ttxd_admin_users').update({role:value.role,commune_code:value.communeCode,active:value.active,...(salt&&passwordHash?{salt,password_hash:passwordHash}:{})}).eq('email',value.email).select('email,role,commune_code,active,created_at').maybeSingle();
  if(error?.message?.includes('TTXD_LAST_PROVINCE'))throw new WorkflowError(409,'Phải giữ ít nhất một tài khoản cấp tỉnh đang hoạt động.');
  if(error)failed(error);if(!data)throw new WorkflowError(404,'Không tìm thấy tài khoản.');
  return managedAccount(data as AccountRow);

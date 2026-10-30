@@ -20,22 +20,27 @@ test('commune authorization allows own scope and denies cross-commune guessed re
   assert.doesNotThrow(()=>assertCommuneAccess(province,'03982'));
 });
 
-test('management record and inspection lists filter at the server by assigned commune',()=>{
+test('management reads show province-wide records and mask reporter name and phone outside the assigned commune',()=>{
   const records={permits:[permit('A','03664'),permit('B','03982')],reports:[report('RA','03664'),report('RB','03982')]};
+  records.reports[0].reporterName='Người gửi xã A';records.reports[0].reporterPhone='0900000001';
+  records.reports[1].reporterName='Người gửi xã B';records.reports[1].reporterPhone='0900000002';
   const before=structuredClone(records);
   const scoped=filterRecordsForUser(records,user);
-  assert.deepEqual(scoped.permits.map(row=>row.id),['A']);
-  assert.deepEqual(scoped.reports.map(row=>row.id),['RA']);
-  assert.deepEqual(filterInspectionsForUser([inspection('IA','03664'),inspection('IB','03982')],user).map(row=>row.id),['IA']);
+  assert.deepEqual(scoped.permits.map(row=>row.id),['A','B']);
+  assert.deepEqual(scoped.reports.map(row=>row.id),['RA','RB']);
+  assert.equal(scoped.reports[0].reporterName,'Người gửi xã A');assert.equal(scoped.reports[0].reporterPhone,'0900000001');
+  assert.equal(scoped.reports[1].reporterName,'');assert.equal(scoped.reports[1].reporterPhone,'');
+  assert.deepEqual(filterInspectionsForUser([inspection('IA','03664'),inspection('IB','03982')],user).map(row=>row.id),['IA','IB']);
   assert.equal(filterRecordsForUser(records,province).permits.length,2);
   assert.deepEqual(records,before);
 });
 
-test('analytics empty scope becomes the commune assignment and explicit foreign scope is denied',()=>{
+test('commune analytics can read any locality or province-wide totals; writes remain controlled by record access',()=>{
   const before=structuredClone(filters);
-  assert.equal(scopeAnalyticsFilters(filters,user).communeCode,'03664');
+  assert.equal(scopeAnalyticsFilters(filters,user).communeCode,'');
   assert.equal(scopeAnalyticsFilters({...filters,communeCode:'03664'},user).communeCode,'03664');
-  assert.throws(()=>scopeAnalyticsFilters({...filters,communeCode:'03982'},user),denied);
+  assert.equal(scopeAnalyticsFilters({...filters,communeCode:'03982'},user).communeCode,'03982');
+  assert.throws(()=>scopeAnalyticsFilters({...filters,communeCode:'99999'},user),error=>error instanceof WorkflowError&&error.status===422);
   assert.equal(scopeAnalyticsFilters(filters,province).communeCode,'');
   assert.deepEqual(filters,before);
 });

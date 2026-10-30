@@ -1,6 +1,10 @@
 -- Server-managed accounts and live session authorization. No business data changes.
 begin;
 
+-- Allow the migration to repair a legacy or manually-corrupted bootstrap scope,
+-- including an already-inactive account; active status is deliberately preserved.
+drop trigger if exists ttxd_guard_last_province_account on public.ttxd_admin_users;
+
 alter table public.ttxd_admin_users add column if not exists role text;
 alter table public.ttxd_admin_users add column if not exists commune_code text;
 alter table public.ttxd_admin_users add column if not exists active boolean not null default true;
@@ -9,7 +13,7 @@ alter table public.ttxd_admin_sessions add column if not exists user_email text 
 -- Only the explicitly designated bootstrap account inherits province access.
 update public.ttxd_admin_users
 set role='province', commune_code=null
-where email='admin@qlxd' and role is null;
+where email='admin@qlxd' and (role is distinct from 'province' or commune_code is not null);
 update public.ttxd_admin_users
 set active=false
 where role is null and email<>'admin@qlxd';
@@ -19,6 +23,10 @@ alter table public.ttxd_admin_users add constraint ttxd_admin_users_scope_check 
   role is null or
   (role='province' and commune_code is null) or
   (role='commune' and commune_code is not null)
+);
+alter table public.ttxd_admin_users drop constraint if exists ttxd_admin_users_bootstrap_scope_check;
+alter table public.ttxd_admin_users add constraint ttxd_admin_users_bootstrap_scope_check check (
+  email <> 'admin@qlxd' or (role='province' and commune_code is null)
 );
 alter table public.ttxd_admin_users drop constraint if exists ttxd_admin_users_commune_fk;
 alter table public.ttxd_admin_users add constraint ttxd_admin_users_commune_fk
@@ -46,7 +54,7 @@ begin
       raise exception 'TTXD_LAST_PROVINCE';
     end if;
   end if;
-  if not new.active then
+  if not new.active or new.password_hash is distinct from old.password_hash then
     update public.ttxd_admin_sessions set expires=0 where user_email=old.email;
   end if;
   return new;

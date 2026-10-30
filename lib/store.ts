@@ -112,8 +112,10 @@ export function updateManagedAccount(input:AccountUpdateInput){
       const provinces=db().prepare("SELECT count(*) AS total FROM admin_users WHERE role='province' AND commune_code IS NULL AND active=1").get()!;
       if(Number(provinces.total)<=1)throw new WorkflowError(409,'Phải giữ ít nhất một tài khoản cấp tỉnh đang hoạt động.');
     }
-    db().prepare('UPDATE admin_users SET role=?,commune_code=?,active=? WHERE email=?').run(value.role,value.communeCode,value.active?1:0,value.email);
-    if(!value.active)db().prepare('UPDATE admin_sessions SET expires=0 WHERE user_email=?').run(value.email);
+    const salt=value.password?randomBytes(16).toString('hex'):undefined;
+    const passwordHash=value.password&&salt?scryptSync(value.password,salt,64).toString('hex'):undefined;
+    db().prepare('UPDATE admin_users SET role=?,commune_code=?,active=?,salt=COALESCE(?,salt),password_hash=COALESCE(?,password_hash) WHERE email=?').run(value.role,value.communeCode,value.active?1:0,salt??null,passwordHash??null,value.email);
+    if(!value.active||value.password)db().prepare('UPDATE admin_sessions SET expires=0 WHERE user_email=?').run(value.email);
     return managedAccount(db().prepare('SELECT email,role,commune_code,active,created_at FROM admin_users WHERE email=?').get(value.email) as AccountRow);
   });
 }

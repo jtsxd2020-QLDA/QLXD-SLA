@@ -4,11 +4,11 @@
 
 | Nghiệp vụ | Cấp tỉnh | Cán bộ xã/phường | Người chưa đăng nhập |
 |---|---|---|---|
-| Bản đồ công khai rút gọn | Toàn tỉnh | Địa bàn được giao trong phiên cán bộ | Toàn tỉnh, không có thông tin nội bộ |
-| Hồ sơ GPXD, phản ánh và thông tin liên hệ nội bộ | Toàn tỉnh | Đúng một địa bàn được giao | Không |
+| Bản đồ công khai rút gọn | Toàn tỉnh | Toàn tỉnh, dữ liệu công khai | Toàn tỉnh, không có thông tin nội bộ |
+| Đọc hồ sơ GPXD, phản ánh và kiểm tra nội bộ | Toàn tỉnh | Toàn tỉnh; tên và điện thoại người phản ánh ngoài địa bàn được ẩn | Không |
 | Nhập GPXD, ghi kiểm tra, cập nhật trạng thái | Toàn tỉnh | Địa bàn được giao | Chỉ gửi phản ánh công khai |
 | Thùng rác và khôi phục hồ sơ | Toàn tỉnh | Hồ sơ của địa bàn được giao | Không |
-| Báo cáo và xuất Excel/PDF | Toàn tỉnh | Theo địa bàn được giao và báo cáo của chính tài khoản | Không |
+| Báo cáo và xuất Excel/PDF | Toàn tỉnh | Toàn tỉnh hoặc một địa bàn; tên và điện thoại người phản ánh ngoài địa bàn được ẩn | Không |
 | Tạo, phân quyền, khóa tài khoản | Có | Không | Không |
 | Dọn dữ liệu minh họa hàng loạt | Có | Không | Không |
 
@@ -18,10 +18,10 @@ Thông tin công khai rút gọn vẫn giữ nguyên theo lựa chọn của ch�
 
 - `admin_users` lưu vai trò `province` hoặc `commune`, một mã địa bàn và trạng thái hoạt động. Phiên lưu liên kết tài khoản. Máy chủ tra quyền hiện tại khi xử lý mỗi yêu cầu.
 - Chỉ tài khoản khởi tạo `admin@qlxd` kế thừa quyền tỉnh khi chuyển đổi. Các tài khoản cũ chưa có vai trò không được tự nâng quyền. Phiên cũ không có liên kết tài khoản bị từ chối.
-- Danh sách, tìm kiếm, lịch sử kiểm tra, thùng rác được lọc trên máy chủ trước khi trả về. Không dựa riêng vào việc ẩn nút hoặc bộ lọc ở trình duyệt.
+- Hồ sơ nội bộ và lịch sử kiểm tra được trả về cho tài khoản cán bộ toàn tỉnh; API xóa tên và điện thoại người phản ánh của địa bàn khác trước khi tìm kiếm, tổng hợp báo cáo hoặc xuất tệp. Không dựa riêng vào việc ẩn dữ liệu ở trình duyệt.
 - Khi ghi, mã xã trong nội dung phải thuộc phạm vi tài khoản. Kiểm tra vị trí với ranh giới ở máy chủ vẫn giữ nguyên. Liên kết GPXD/phản ánh của kiểm tra được kiểm tra độc lập theo ID để chống ghép hồ sơ xã khác.
 - Thay đổi trạng thái, xóa và khôi phục kiểm tra địa bàn của bản ghi đã lưu trước khi ghi. Nhật ký trạng thái và người xóa nhận email tài khoản thực hiện.
-- Khóa tài khoản chặn phiên đang có. Đổi địa bàn áp dụng cho yêu cầu tiếp theo. Tệp báo cáo chụp trước đó phải có danh tính và địa bàn phù hợp mới được tải bởi tài khoản xã.
+- Khóa tài khoản hoặc đặt lại mật khẩu sẽ thu hồi phiên cũ. Đổi địa bàn áp dụng cho yêu cầu tiếp theo. Tệp báo cáo đã tạo chỉ tải được bởi đúng tài khoản đã tạo bản chụp.
 - Các bảng Supabase vẫn dành cho máy chủ, có RLS và không cấp truy cập trực tiếp cho `anon`/`authenticated`. Khóa máy chủ không được gửi cho trình duyệt. Đây là xác thực tài khoản ứng dụng riêng, không dùng JWT Supabase của cán bộ để tự động phân quyền bảng.
 
 ## Nâng cấp dữ liệu

@@ -4,5 +4,5 @@ import {validateRecordLifecycle} from '@/lib/validation';
 import {assertValidIdentity} from '@/lib/authorization';
 import {requireRecordAccess} from '@/lib/scoped-records';
 export const runtime='nodejs';
-export async function GET(request:Request){try{const session=await requireSession(request);assertValidIdentity(session.user);const data=await getRecordLifecycleData();if(session.user.role==='province')return json(data);const active=data.active.filter(record=>record.communeCode===session.user.communeCode),trash=data.trash.filter(record=>record.communeCode===session.user.communeCode);return json({active,trash,syntheticCount:active.filter(record=>record.synthetic).length});}catch(error){return errorResponse(error);}}
+export async function GET(request:Request){try{const session=await requireSession(request);assertValidIdentity(session.user);return json(await getRecordLifecycleData());}catch(error){return errorResponse(error);}}
 export async function POST(request:Request){try{const session=await requireSession(request,true);const input=validateRecordLifecycle(await readJson(request));await requireRecordAccess(session.user,input.kind,input.id,true);return json(await updateRecordLifecycle(input,session.user.email));}catch(error){return errorResponse(error);}}

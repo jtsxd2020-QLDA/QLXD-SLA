@@ -27,23 +27,25 @@ export function assertRecordAccess(user: UserIdentity, record: {communeCode: str
 export function filterRecordsForUser(records: RecordsResponse, user: UserIdentity): RecordsResponse {
   assertValidIdentity(user);
   if (user.role === 'province') return records;
-  return { permits: records.permits.filter(record => record.communeCode === user.communeCode), reports: records.reports.filter(record => record.communeCode === user.communeCode) };
+  return {
+    permits: [...records.permits],
+    reports: records.reports.map(record => record.communeCode === user.communeCode ? record : { ...record, reporterName: '', reporterPhone: '' }),
+  };
 }
 
 export function filterInspectionsForUser(inspections: Inspection[], user: UserIdentity): Inspection[] {
   assertValidIdentity(user);
-  return user.role === 'province' ? inspections : inspections.filter(record => record.communeCode === user.communeCode);
+  return inspections;
 }
 
 export function scopeAnalyticsFilters(filters: AnalyticsFilters, user: UserIdentity): AnalyticsFilters {
   assertValidIdentity(user);
-  if (user.role === 'province') return filters;
-  if (filters.communeCode) assertCommuneAccess(user, filters.communeCode);
-  return { ...filters, communeCode: user.communeCode! };
+  if (filters.communeCode && !communes.some(commune => commune.code === filters.communeCode)) throw new WorkflowError(422, 'Địa bàn báo cáo không hợp lệ.');
+  return filters;
 }
 
 export function assertSnapshotAccess(user: UserIdentity, snapshot: AnalyticsSnapshot): void {
   assertValidIdentity(user);
   if (user.role === 'province') return;
-  if (!snapshot.access || snapshot.access.role !== 'commune' || snapshot.access.communeCode !== user.communeCode || snapshot.access.email !== user.email || snapshot.filters.communeCode !== user.communeCode) throw new WorkflowError(403, 'Báo cáo không thuộc phạm vi của tài khoản. Hãy tạo báo cáo mới cho xã/phường được giao.');
+  if (!snapshot.access || snapshot.access.role !== 'commune' || snapshot.access.communeCode !== user.communeCode || snapshot.access.email !== user.email) throw new WorkflowError(403, 'Báo cáo không thuộc tài khoản đang đăng nhập. Hãy tạo báo cáo mới để tiếp tục.');
 }

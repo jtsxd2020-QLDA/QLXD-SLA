@@ -22,7 +22,11 @@ test('cloud account adapter binds sessions, reads current scope each time and ne
     if (table === 'ttxd_admin_users') {
       if (method === 'POST') { const row = JSON.parse(String(options.body)); accounts.set(row.email, row); return response(null, 201); }
       const email = url.searchParams.get('email')?.slice(3);
-      if (method === 'PATCH') { Object.assign(accounts.get(email!)!, JSON.parse(String(options.body))); return response(accounts.get(email!)); }
+      if (method === 'PATCH') {
+        const account=accounts.get(email!)!;const previousHash=account.password_hash;Object.assign(account,JSON.parse(String(options.body)));
+        if(account.password_hash!==previousHash)for(const session of sessions.values())if(session.user_email===email)session.expires=0;
+        return response(account);
+      }
       reads.push(email || 'list');
       return response(email ? accounts.get(email) || null : [...accounts.values()]);
     }
@@ -55,6 +59,16 @@ test('cloud account adapter binds sessions, reads current scope each time and ne
     assert.equal(await cloud.verifyAdminCredentials('staff@qa', password), false);
     assert.equal(JSON.stringify(await cloud.listManagedAccounts()).includes('password_hash'), false);
     assert.equal(JSON.stringify(await cloud.listManagedAccounts()).includes('salt'), false);
+
+    await cloud.updateManagedAccount({ email: 'staff@qa', role: 'commune', communeCode: communes[1].code, active: true });
+    const beforeReset = await cloud.createAdminSession('staff@qa');
+    const resetPassword = 'Synthetic-password-reset-2026!';
+    const resetResult = await cloud.updateManagedAccount({ email: 'staff@qa', role: 'commune', communeCode: communes[1].code, active: true, password: resetPassword });
+    assert.equal((await cloud.findAdminSession(beforeReset.token)), undefined);
+    assert.equal(await cloud.verifyAdminCredentials('staff@qa', password), false);
+    assert.equal(await cloud.verifyAdminCredentials('staff@qa', resetPassword), true);
+    assert.equal('password' in resetResult, false);
+    assert.equal('password_hash' in resetResult, false);
     assert.ok(reads.filter(email => email === 'staff@qa').length >= 5);
     const legacy = 'legacy-unbound-session';
     sessions.set(createHash('sha256').update(legacy).digest('hex'), { csrf: 'legacy', expires: Date.now() + 60_000 });

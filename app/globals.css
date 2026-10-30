@@ -75,6 +75,12 @@
 .map-record-marker.permit[data-construction-status="completed"]{background:#16835d}
 .map-record-marker.report[data-status="unresolved"]{background:#d45a18}
 .map-record-marker.report[data-status="resolved"]{background:#16835d}
+.map-record-marker.inspection .map-marker-pin{background:#7047b8}
+.map-record-marker.permit[data-finding="compliant"] .map-marker-pin{background:#16835d}
+.map-record-marker[data-finding="wrong_permit"] .map-marker-pin{background:#c2410c}
+.map-record-marker[data-finding="unlicensed"] .map-marker-pin{background:#b42318}
+.map-record-marker[data-finding="no_permit_presented"] .map-marker-pin,.map-record-marker[data-finding="unverified"] .map-marker-pin{background:#7c3aed}
+.map-record-marker[data-remediation="corrected"] .map-marker-pin{background:#16835d}
 .record-dot.status-uninspected{background:#c74747}
 .record-dot.status-under_construction{background:#d98718}
 .record-dot.status-completed,.record-dot.status-resolved{background:#16835d}
@@ -142,6 +148,18 @@
 .table-scroll{max-height:min(560px,70dvh);overflow-x:auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
 .table-scroll thead th{position:sticky;top:0;z-index:1}
 .report-dashboard .table-scroll{max-height:min(500px,70dvh)}
+
+/* Source-cited, non-generative citizen help panel. */
+.citizen-qa{display:grid;gap:12px;margin:18px clamp(16px,3vw,42px) 0;padding:clamp(16px,2vw,24px)}
+.citizen-qa-search{width:min(100%,720px);min-height:44px}
+.citizen-qa-list{display:grid;gap:8px;max-width:1000px}
+.citizen-qa-item{border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 14px}
+.citizen-qa-item summary{cursor:pointer;min-height:46px;display:flex;align-items:center;color:var(--ink);font-size:13px;font-weight:700;line-height:1.5}
+.citizen-qa-answer{margin:0;padding:0 0 10px;color:var(--ink);font-size:12px;line-height:1.8;white-space:pre-line}
+.citizen-qa-answer code{border-radius:4px;background:#f1f5fa;padding:2px 4px;font-size:.92em}
+.citizen-qa-source{margin:0 0 12px;color:var(--muted);font-size:10px;line-height:1.6;overflow-wrap:anywhere}
+.citizen-qa-scope{margin:0;color:var(--muted);font-size:10px;line-height:1.6}
+@media(max-width:760px){.citizen-qa{margin:12px 13px 0;padding:15px}.citizen-qa-item{padding:0 11px}.citizen-qa-item summary{font-size:12px}.citizen-qa-answer{font-size:11px}}
 .admin-login-dialog{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#9aaac0 transparent}
 .form-fieldset{min-height:0;padding:0}
 

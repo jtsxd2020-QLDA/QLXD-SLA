@@ -3,6 +3,7 @@ import { checkSameOriginRequest,errorResponse,json,readJson,persistentRateLimit,
 import {assertCommuneAccess} from '@/lib/authorization';
 import { insertReport,findAdminSession } from '@/lib/persistence';
 import { validateReport } from '@/lib/validation';
+import communes from '@/lib/communes.json';
 export const runtime='nodejs';
 export async function POST(request:Request) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request:Request) {
     const {honeypot,...payload}=body as Record<string,unknown>;
     if(typeof honeypot==='string'&&honeypot.trim()) throw new ApiError(400,'Không thể tiếp nhận phản ánh.');
     const input=validateReport(payload);const token=sessionToken(request),session=token?await findAdminSession(token):undefined;if(session)assertCommuneAccess(session.user,input.communeCode);const record=await insertReport(input,idempotency(request,input,session?`public-report:${session.user.email}`:'public-report'));
-    return json({publicCode:record.publicCode,receivedAt:record.createdAt},201);
+    const communeName=communes.find(commune=>commune.code===record.communeCode)?.name||record.communeCode;
+    return json({publicCode:record.publicCode,receivedAt:record.createdAt,communeCode:record.communeCode,communeName},201);
   }catch(error){return errorResponse(error);}
 }

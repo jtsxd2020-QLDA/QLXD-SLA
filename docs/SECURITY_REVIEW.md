@@ -2,6 +2,8 @@
 
 Cập nhật: 13/10/2026. Phạm vi: cổng bản đồ công dân, API gửi phản ánh, tài khoản quản trị `admin@qlxd`, API nghiệp vụ và SQLite mã hóa. Đây là bản đầu chạy trên một máy, chưa xác nhận để vận hành công khai trên Internet.
 
+> **Tình trạng mã nguồn ngày 30/10/2026:** các mục kiểm tra cũ bên dưới là ghi nhận lịch sử của bản trước. Nhánh `feat/provincial-readonly-routing` hiện bổ sung tài khoản tỉnh/xã, quyền xem toàn tỉnh ở chế độ chỉ đọc, ẩn thông tin liên hệ phản ánh ngoài địa bàn, và kiểm tra quyền trên API ghi. Kiểm thử hồi quy và trình duyệt cho nhánh mới đang được hoàn tất; chưa áp dụng migration lên Supabase hoặc triển khai Vercel trong lần cập nhật này.
+
 ## Kiểm tra đã xác nhận
 
 - Người dân được đọc API bản đồ và gửi phản ánh mà không đăng nhập. Dữ liệu công khai chỉ gồm loại hồ sơ, số GPXD/mã phản ánh, mã xã/phường, vị trí và trạng thái. API không trả tên/số điện thoại người gửi, nội dung phản ánh, địa chỉ đầy đủ hoặc thông tin chủ đầu tư.

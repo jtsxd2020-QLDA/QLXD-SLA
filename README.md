@@ -26,7 +26,7 @@ Khi nâng cấp, các phiên đăng nhập cũ không gắn tài khoản sẽ h�
 
 - Bản đồ công khai hiển thị điểm GPXD và mã/trạng thái phản ánh. API công khai không trả tên/số điện thoại người gửi, nội dung chi tiết, tên chủ đầu tư hoặc địa chỉ đầy đủ.
 - Người dân gửi phản ánh trực tiếp trên bản đồ, chọn điểm và xã/phường, nhận mã tiếp nhận. Cơ quan chuyên môn có thể xem nội dung và thông tin liên hệ trong không gian quản lý.
-- Tài khoản cấp tỉnh quản lý toàn tỉnh và phân quyền tài khoản. Cán bộ xã/phường chỉ xem, nhập và xử lý hồ sơ nội bộ của một địa bàn được giao; máy chủ kiểm tra quyền trên mỗi yêu cầu, kể cả báo cáo và xuất tệp.
+- Tài khoản cấp tỉnh quản lý toàn tỉnh và phân quyền tài khoản. Cán bộ xã/phường có thể xem hồ sơ nội bộ toàn tỉnh ở chế độ chỉ đọc (ẩn tên/số điện thoại người phản ánh ngoài địa bàn), nhưng chỉ nhập và xử lý hồ sơ thuộc địa bàn được giao; máy chủ kiểm tra quyền trên mỗi yêu cầu ghi.
 - 75 ranh giới có nguồn và mã SHA-256 ở `geodata/provenance.json`; ranh giới tham khảo, chưa được xác nhận pháp lý. Nền mặc định là Google Hybrid, có lựa chọn Esri và OpenStreetMap.
 
 ## Dữ liệu và giới hạn triển khai

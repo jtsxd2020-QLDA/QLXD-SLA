@@ -45,6 +45,19 @@ test('bound sessions always use current assigned commune and are invalidated by 
   const fresh=store.createAdminSession(email);assert.equal(store.findAdminSession(fresh.token)?.user.communeCode,'03982');
 });
 
+test('province password reset replaces credentials and immediately invalidates every previous session',()=>{
+  const email='password-reset@qlxd.test',nextPassword='New-reset-password-2026!';
+  store.createManagedAccount({email,password,role:'commune',communeCode:'03664'});
+  const old=store.createAdminSession(email);
+  const returned=store.updateManagedAccount({email,role:'commune',communeCode:'03664',active:true,password:nextPassword});
+  assert.equal(store.findAdminSession(old.token),undefined);
+  assert.equal(store.verifyAdminCredentials(email,password),false);
+  assert.equal(store.verifyAdminCredentials(email,nextPassword),true);
+  assert.equal('password' in returned,false);
+  const fresh=store.createAdminSession(email);
+  assert.equal(store.findAdminSession(fresh.token)?.user.email,email);
+});
+
 test('managed account listing is a whitelist without salts or password material',()=>{
   const listed=store.listManagedAccounts();
   assert.ok(listed.some(account=>account.email==='admin@qlxd'));

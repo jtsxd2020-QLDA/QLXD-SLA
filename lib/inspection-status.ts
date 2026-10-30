@@ -27,6 +27,35 @@ export function getRecordInspections(index: InspectionIndex, kind: 'permit' | 'r
   return index.get(`${kind}:${id}`) ?? emptyInspections;
 }
 
+export function isVerifiedInspection(inspection: Inspection): boolean {
+  return inspection.verified && inspection.result !== 'unverified';
+}
+
+/** Histories are sorted newest first, so this preserves the newest confirmed conclusion. */
+export function getLatestVerifiedInspection(inspections: Inspection[]): Inspection | undefined {
+  return inspections.find(isVerifiedInspection);
+}
+
+export function getPreferredInspection(inspections: Inspection[]): Inspection | undefined {
+  return getLatestVerifiedInspection(inspections) || inspections[0];
+}
+
+export function getRemediationStatus(inspection?: Inspection): 'not_applicable' | 'pending' | 'corrected' {
+  if (!inspection) return 'not_applicable';
+  if (inspection.remediationStatus) return inspection.remediationStatus;
+  return isVerifiedInspection(inspection) && ['wrong_permit', 'unlicensed', 'no_permit_presented'].includes(inspection.result) ? 'pending' : 'not_applicable';
+}
+
+export function inspectionMapStatus(inspection?: Inspection): string | undefined {
+  if (!inspection) return undefined;
+  if (getRemediationStatus(inspection) === 'corrected') return 'corrected';
+  if (!isVerifiedInspection(inspection)) return 'needs_verification';
+  if (inspection.result === 'wrong_permit') return 'wrong_permit';
+  if (inspection.result === 'unlicensed') return 'unlicensed';
+  if (inspection.result === 'no_permit_presented') return 'no_permit_presented';
+  return 'inspected';
+}
+
 export function matchesInspectionFilter(index: InspectionIndex, kind: 'permit' | 'report', id: string, filter: InspectionFilter, state: InspectionLoadState): boolean {
   if (filter === 'all') return true;
   if (state !== 'ready') return false;
@@ -36,7 +65,20 @@ export function matchesInspectionFilter(index: InspectionIndex, kind: 'permit' |
 
 export function inspectionResultLabel(inspection: Inspection): string {
   if (!inspection.verified || inspection.result === 'unverified') return 'Chưa đủ cơ sở xác minh';
-  return ({ compliant: 'Phù hợp nội dung GPXD', wrong_permit: 'Sai nội dung GPXD', no_permit_presented: 'Chưa xuất trình GPXD, cần xác minh' })[inspection.result] || 'Chưa đủ cơ sở xác minh';
+  return ({ compliant: 'Phù hợp nội dung GPXD', wrong_permit: 'Sai nội dung GPXD', unlicensed: 'Thi công không có GPXD', no_permit_presented: 'Chưa xuất trình GPXD · cần xác minh' })[inspection.result] || 'Chưa đủ cơ sở xác minh';
+}
+
+export function inspectionMapStatusLabel(inspection?: Inspection): string {
+  if (!inspection) return 'Chưa có kết luận kiểm tra';
+  const status = inspectionMapStatus(inspection);
+  return ({
+    corrected: 'Đã khắc phục vi phạm',
+    needs_verification: 'Cần xác minh',
+    wrong_permit: 'Thi công sai giấy phép',
+    unlicensed: 'Thi công không có GPXD',
+    no_permit_presented: 'Chưa xuất trình GPXD · cần xác minh',
+    inspected: 'Đã kiểm tra · phù hợp GPXD',
+  } as Record<string, string>)[status || ''] || 'Chưa có kết luận kiểm tra';
 }
 
 export function formatInspectionDate(value: string): string {
