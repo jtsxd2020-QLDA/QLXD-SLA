@@ -1,6 +1,7 @@
 import {idempotency} from '@/lib/workflow';
-import { checkSameOriginRequest,errorResponse,json,readJson,persistentRateLimit,clientIP,ApiError } from '@/lib/security';
-import { insertReport } from '@/lib/persistence';
+import { checkSameOriginRequest,errorResponse,json,readJson,persistentRateLimit,clientIP,ApiError,sessionToken } from '@/lib/security';
+import {assertCommuneAccess} from '@/lib/authorization';
+import { insertReport,findAdminSession } from '@/lib/persistence';
 import { validateReport } from '@/lib/validation';
 export const runtime='nodejs';
 export async function POST(request:Request) {
@@ -13,7 +14,7 @@ export async function POST(request:Request) {
     if(!body||typeof body!=='object'||Array.isArray(body)) throw new ApiError(400,'Nội dung không hợp lệ.');
     const {honeypot,...payload}=body as Record<string,unknown>;
     if(typeof honeypot==='string'&&honeypot.trim()) throw new ApiError(400,'Không thể tiếp nhận phản ánh.');
-    const input=validateReport(payload);const record=await insertReport(input,idempotency(request,input,'public-report'));
+    const input=validateReport(payload);const token=sessionToken(request),session=token?await findAdminSession(token):undefined;if(session)assertCommuneAccess(session.user,input.communeCode);const record=await insertReport(input,idempotency(request,input,session?`public-report:${session.user.email}`:'public-report'));
     return json({publicCode:record.publicCode,receivedAt:record.createdAt},201);
   }catch(error){return errorResponse(error);}
 }

@@ -20,4 +20,7 @@ export function useRecordDraft(name:string,defaults:Record<string,string>){
  const clear=()=>{drafts.delete(name);try{sessionStorage.removeItem(`qlxd-draft:${name}`);}catch{/* The draft still clears in memory. */}setDraft(freshDraft(defaults,Date.now(),true));setRestored(false);};
  return{draft,update,setStep,setPersist,clear,restored,ready};
 }
-export function clearAdminDrafts(){for(const name of ['admin-permit','admin-report']){drafts.delete(name);try{sessionStorage.removeItem(`qlxd-draft:${name}`);}catch{/* Clear memory even when storage is blocked. */}}}
+export function clearAdminDrafts(){
+ for(const name of drafts.keys())if(name.startsWith('admin-'))drafts.delete(name);
+ try{for(const key of Object.keys(sessionStorage))if(key.startsWith('qlxd-draft:admin-'))sessionStorage.removeItem(key);}catch{/* In-memory drafts still clear when storage is blocked. */}
+}

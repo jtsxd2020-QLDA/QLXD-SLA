@@ -25,6 +25,20 @@ Nhập mật khẩu ít nhất 12 ký tự hai lần; Terminal không hiện ký
 
 Sau khi tạo xong, tải lại trang, bấm **Đăng nhập quản lý**, nhập `admin@qlxd` cùng mật khẩu. Khu vực quản lý cho phép nhập GPXD và xem thông tin đầy đủ của phản ánh. Bấm **Đăng xuất** khi kết thúc; phiên tối đa 8 giờ.
 
+## Cấp tỉnh tạo tài khoản và giao địa bàn
+
+1. Đăng nhập tài khoản cấp tỉnh, chọn **Tài khoản và phân quyền**.
+2. Bấm **Tạo tài khoản**, nhập tên tài khoản dạng email và mật khẩu ban đầu ít nhất 12 ký tự.
+3. Chọn **Cán bộ xã/phường**, chọn đúng xã/phường được giao, rồi lưu. Chỉ chọn **Cấp tỉnh** cho người có nhiệm vụ quản lý toàn tỉnh.
+4. Bàn giao mật khẩu riêng qua kênh bảo mật. Không dùng chung `admin@qlxd` cho các xã.
+5. Dùng **Phân quyền / Khóa** để thay địa bàn hoặc bỏ dấu cho phép hoạt động khi cần khóa tài khoản. Không thể tự hạ quyền/khóa chính tài khoản đang dùng hoặc khóa tài khoản khởi tạo cấp tỉnh.
+
+Cán bộ xã chỉ xem, tìm kiếm, nhập hồ sơ, ghi kiểm tra, cập nhật trạng thái và thao tác thùng rác trong địa bàn được giao. Báo cáo và tệp Excel/PDF cũng theo phạm vi đó. Các yêu cầu truy cập hồ sơ xã khác bị máy chủ từ chối, kể cả khi sửa mã hồ sơ hoặc mã xã trực tiếp.
+
+Bản đồ người dân vẫn công khai thông tin rút gọn toàn tỉnh theo cấu hình đã thống nhất. Tên, số điện thoại và nội dung hồ sơ nội bộ không công khai. Phân quyền xã áp dụng cho hồ sơ nội bộ, không biến thông tin vốn công khai thành bí mật.
+
+Khi nâng cấp, cần đăng nhập lại do các phiên cũ chưa gắn tài khoản không được chấp nhận. Không đổi mật khẩu quản trị hiện có. Không tự tạo tài khoản hoặc mật khẩu chung cho 75 địa bàn.
+
 ## Nhập GPXD
 
 1. Trong không gian quản lý, bấm **Nhập GPXD**.

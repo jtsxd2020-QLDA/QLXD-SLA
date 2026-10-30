@@ -9,7 +9,7 @@ Hồ sơ giữ định dạng AES-256-GCM hiện có. Chuyển nguyên ciphertex
 ## Chuẩn bị và chuyển
 
 1. Tạo dự án Supabase riêng trong tài khoản đúng; người dùng tự nhập mật khẩu cơ sở dữ liệu.
-2. Áp dụng `supabase/migrations/20261013102413_province_cloud_store.sql` bằng SQL Editor hoặc CLI trên đúng dự án riêng.
+2. Áp dụng lần lượt các migration trong `supabase/migrations/` theo thứ tự thời gian trên đúng dự án riêng. Bản đã vận hành cần bổ sung migration `20261030080804_account_commune_rbac.sql` trước khi triển khai mã phân quyền mới; không chạy lại việc chuyển dữ liệu ban đầu nếu đã hoàn thành.
 3. Sao lưu nhất quán SQLite và `secret.key`; xuất các hàng mã hóa vào `data/cloud-transfer.json` (đã loại khỏi Git).
 4. Tạo `.env.cloud.local` riêng, quyền đọc 600, gồm `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `TTXD_ENCRYPTION_KEY`, `TTXD_STORAGE_BACKEND=supabase`, `TTXD_MIGRATION_PROJECT_REF` và `TTXD_PUBLIC_ORIGIN`. Không đưa tệp này lên GitHub. Khóa mã hóa là base64 của đúng `data/secret.key` đang dùng, không tạo khóa thay thế.
 5. Chạy `npm run data:migrate`. Công cụ kiểm tra đúng project ref, xác minh từng hàng và từ chối ghi đè hàng khác nội dung. Sau khi chuyển vẫn giữ bản sao tại máy.
@@ -22,4 +22,4 @@ Chỉ cập nhật nhánh main khi schema, dữ liệu và cấu hình hosting �
 
 ## Giới hạn
 
-Ứng dụng hiện có một tài khoản quản lý chung, chưa phân quyền cán bộ theo 75 địa bàn. Lưu trữ cloud và mã hóa không thay thế kiểm thử tải, quy trình sao lưu/khôi phục, giám sát và xác minh ranh giới. Bản đồ công khai hiện giải mã toàn bộ danh sách ở backend mỗi lần tải, cần phân trang/truy vấn theo phạm vi khi tăng dữ liệu.
+Ứng dụng có tài khoản cấp tỉnh và tài khoản cán bộ xã/phường được giao đúng một địa bàn; cấp tỉnh tạo và phân quyền tại màn hình quản lý tài khoản. Phải áp dụng migration phân quyền trước khi phát hành. Lưu trữ cloud và mã hóa không thay thế kiểm thử tải, quy trình sao lưu/khôi phục, giám sát và xác minh ranh giới. Bản đồ công khai hiện giải mã toàn bộ danh sách ở backend mỗi lần tải, cần phân trang/truy vấn theo phạm vi khi tăng dữ liệu.
