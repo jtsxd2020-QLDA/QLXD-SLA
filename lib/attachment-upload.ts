@@ -1,6 +1,6 @@
 'use client';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { ATTACHMENT_BUCKET } from './attachments';
+import { ATTACHMENT_BUCKET } from './attachment-constants';
 import type { AttachmentKind, RecordAttachment } from './types';
 type CaptureData={capturedAt?:string;capturedLat?:number;capturedLng?:number};
 let client:SupabaseClient|undefined;
