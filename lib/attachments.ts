@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import { ApiError } from './security';
 import type { AttachmentKind } from './types';
-
-export const ATTACHMENT_BUCKET = 'qlxd-private-attachments';
-export const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
+import { MAX_ATTACHMENT_BYTES } from './attachment-constants';
+export { ATTACHMENT_BUCKET, MAX_ATTACHMENT_BYTES } from './attachment-constants';
 const permitMime:Record<string,string[]>={
   'application/pdf':['pdf'],
   'image/png':['png'],
