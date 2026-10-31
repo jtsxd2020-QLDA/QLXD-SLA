@@ -5,6 +5,6 @@ export async function GET(request:Request) {
   try {
     checkSameOriginRequest(request);
     const token=sessionToken(request),session=token?await findAdminSession(token):undefined;
-    return json({authenticated:!!session,mode:session?'admin':'citizen',...(session?{csrfToken:session.csrf,email:'admin@qlxd'}:{})});
+    return json({authenticated:!!session,mode:session?'admin':'citizen',...(session?{csrfToken:session.csrf,...session.user}:{})});
   }catch(e){return errorResponse(e);}
 }

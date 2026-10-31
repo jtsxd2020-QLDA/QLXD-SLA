@@ -1,6 +1,7 @@
 import {WorkflowError} from './workflow';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { findAdminSession,cloudEnabled,consumeCloudRateLimit } from './persistence';
+import type { AuthSession } from './types';
 export class ApiError extends Error { constructor(public status:number,message:string,public fields?:Record<string,string>) {super(message);} }
 export const COOKIE_NAME='ttxd_admin_session';
 export function checkSameOriginRequest(request: Request, mutation=false) {
@@ -26,7 +27,7 @@ export function checkSameOriginRequest(request: Request, mutation=false) {
 }
 export function secureCookie(request:Request){return process.env.TTXD_PUBLIC_ORIGIN?.startsWith('https://')===true||request.headers.get('x-forwarded-proto')?.split(',')[0].trim()==='https'||request.headers.get('origin')?.startsWith('https://')===true||new URL(request.url).protocol==='https:';}
 export function sessionToken(request: Request) { return request.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(COOKIE_NAME+'='))?.slice(COOKIE_NAME.length+1) || ''; }
-export async function requireSession(request:Request,mutation=false) {
+export async function requireSession(request:Request,mutation=false):Promise<AuthSession> {
   checkSameOriginRequest(request,mutation); const token=sessionToken(request), session=token ? await findAdminSession(token):undefined;
   if(!session) throw new ApiError(401,'Vui lòng đăng nhập tài khoản quản lý.');
   if(mutation) {const csrf=request.headers.get('x-csrf-token')||'';const hash=(s:string)=>createHash('sha256').update(s).digest();if(!timingSafeEqual(hash(csrf),hash(session.csrf))) throw new ApiError(403,'Phiên xác nhận không hợp lệ. Vui lòng tải lại trang.');}

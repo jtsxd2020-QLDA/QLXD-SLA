@@ -9,7 +9,7 @@ import communes from '@/lib/communes.json';
 import type { MapRecord, Position, RecordMeasurement } from '@/lib/types';
 import { formatArea, formatDistance, measureLineMeters, measurePolygonAreaSquareMeters } from '@/lib/map-measurement';
 import { BASEMAPS, GOOGLE_MAPS_KEY, GOOGLE_HYBRID_SOURCE, REFERENCE_SOURCES, googleCopyright, resolveBasemap, type BasemapId } from '@/lib/basemaps';
-import { constructionStatusLabel, getConstructionStatus, reportStatusLabel } from '@/lib/record-status';
+import { getConstructionStatus, mapRecordStatusLabel } from '@/lib/record-status';
 import type { InspectionLoadState } from '@/lib/inspection-status';
 
 type MeasurementType = 'line' | 'area';
@@ -19,10 +19,10 @@ type Props = {
   records: MapRecord[]; selectedCommune: string; onPick: (point: Position, measurement?: RecordMeasurement) => void;
   onSelect: (record: MapRecord) => void; picked: Position | null; selectedRecordId?: string; onCommuneNavigate?: (code:string)=>void;
   workflowRole?: 'citizen' | 'admin'; selectionOnly?: boolean; onMeasurementClear?:()=>void;
-  onWorkflowAction?: (action: WorkflowAction, point: Position, measurement?: RecordMeasurement) => void;
+  onWorkflowAction?: (action: WorkflowAction, point: Position, measurement?: RecordMeasurement) => void; canCreateAtPosition?: (point:Position)=>boolean;
 };
 
-export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction, onMeasurementClear, inspectionCounts, inspectionState }: Props) {
+export default function MapCanvas({ records, selectedCommune, onPick, onSelect, picked, selectedRecordId, onCommuneNavigate, workflowRole, selectionOnly = false, onWorkflowAction, onMeasurementClear, inspectionCounts, inspectionState, canCreateAtPosition }: Props) {
   const [candidate,setCandidate]=useState<{position:Position;accuracy?:number}|null>(null);
   const [locating,setLocating]=useState(false);
   const [locationMessage,setLocationMessage]=useState('');
@@ -399,24 +399,31 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     markers.current.forEach((marker) => marker.remove());
     markers.current = records.map((record) => {
       const button = document.createElement('button');
-      const permitStatus=record.kind==='permit'?getConstructionStatus(record.constructionStatus):undefined;
+      const isPermit=record.kind==='permit',isInspection=record.kind==='inspection';
+      const permitStatus=isPermit?getConstructionStatus(record.constructionStatus):undefined;
       button.type = 'button';
       button.className = `map-record-marker ${record.kind}${record.id === selectedRecordId ? ' selected' : ''}`;
-      button.dataset.status=record.kind==='permit'?permitStatus:(record.status==='resolved'?'resolved':'unresolved');
+      button.dataset.status=isPermit?permitStatus||'uninspected':isInspection?'inspection':(record.status==='resolved'?'resolved':'unresolved');
       if(permitStatus)button.dataset.constructionStatus=permitStatus;
-      const statusText=record.kind==='permit'?constructionStatusLabel(permitStatus):reportStatusLabel(record.status);
-      button.setAttribute('aria-label', `${record.kind === 'permit' ? 'Giấy phép xây dựng' : 'Phản ánh'}: ${record.title} · ${statusText}`);
+      if(record.latestVerifiedResult)button.dataset.finding=record.latestVerifiedResult;
+      else if(record.latestInspectionResult)button.dataset.finding=record.latestInspectionResult;
+      if(record.remediationStatus)button.dataset.remediation=record.remediationStatus;
+      const statusText=mapRecordStatusLabel(record);
+      const recordType=isPermit?'Giấy phép xây dựng':isInspection?'Kiểm tra hiện trường':'Phản ánh';
+      button.setAttribute('aria-label', `${recordType}: ${record.title} · ${statusText}`);
       button.setAttribute('data-record-id', record.id);
       button.title = `${record.title} · ${statusText}`;
       const svgNamespace='http://www.w3.org/2000/svg';
       const icon=document.createElementNS(svgNamespace,'svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('width','19');icon.setAttribute('height','19');icon.setAttribute('fill','none');icon.setAttribute('stroke','currentColor');icon.setAttribute('stroke-width','2');icon.setAttribute('stroke-linecap','round');icon.setAttribute('stroke-linejoin','round');icon.setAttribute('aria-hidden','true');
       if(record.kind==='permit'){
         const building=document.createElementNS(svgNamespace,'path');building.setAttribute('d','M3 22V7l9-4 9 4v15H3zM9 22v-6h6v6M8 10h.01M12 10h.01M16 10h.01');icon.append(building);
+      }else if(isInspection){
+        const clipboard=document.createElementNS(svgNamespace,'path');clipboard.setAttribute('d','M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M9 2h6v4H9zM8 13l2 2 5-5');icon.append(clipboard);
       }else{
         const bubble=document.createElementNS(svgNamespace,'path');bubble.setAttribute('d','M21 11.5a8.5 8.5 0 0 1-12.8 7.3L3 21l1.6-4.8A8.5 8.5 0 1 1 21 11.5zM8 11.5h.01M12 11.5h.01M16 11.5h.01');icon.append(bubble);
       }
       const pin=document.createElement('span');pin.className='map-marker-pin';pin.append(icon);button.append(pin);
-      if(workflowRole==='admin'&&inspectionState){
+      if(workflowRole==='admin'&&inspectionState&&record.kind!=='inspection'){
         const count=inspectionState==='ready'?(inspectionCounts?.get(`${record.kind}:${record.id}`)??0):0;
         const label=inspectionState==='loading'?'Đang tải kiểm tra':inspectionState==='error'?'Chưa xác minh được kiểm tra':count?`Đã ghi nhận kiểm tra: ${count} lượt`:'Chưa có bản ghi kiểm tra';
         button.dataset.inspection=inspectionState==='ready'?(count?'recorded':'unrecorded'):inspectionState;
@@ -500,7 +507,7 @@ export default function MapCanvas({ records, selectedCommune, onPick, onSelect, 
     {!selectionOnly&&gesturePosition&&<section className="map-action-panel" role="dialog" aria-label="Chọn thao tác tại điểm trên bản đồ"><header className="map-panel-header"><div><strong>Chọn thao tác</strong><small>{gesturePosition.lat.toFixed(6)}, {gesturePosition.lng.toFixed(6)}</small></div><button className="icon-button" type="button" aria-label="Đóng chọn thao tác" onClick={()=>setGesturePosition(null)}><X size={18}/></button></header><p>Chọn cách ghi nhận vị trí hoặc bắt đầu đo trên bản đồ.</p><div className="map-action-options"><button type="button" className="button primary" onClick={()=>{setCandidate({position:gesturePosition});setGesturePosition(null);}}><MousePointer2 size={17}/>Chọn điểm này</button><button type="button" className="button secondary" onClick={()=>beginMeasurement('line')}><Ruler size={17}/>Đo đoạn thẳng</button><button type="button" className="button secondary" onClick={()=>beginMeasurement('area')}><Pentagon size={17}/>Đo diện tích</button></div></section>}
     {!selectionOnly&&measureMode&&<section className="map-action-panel map-measure-panel" role="region" aria-label={measureMode==='line'?'Đo đoạn thẳng':'Đo diện tích'}><header className="map-panel-header"><div><strong>{measureMode==='line'?'Đang đo đoạn thẳng':'Đang vẽ khu vực'}</strong><small>{measurePoints.length?'Chạm/click các đỉnh tiếp theo (tối đa 200 điểm).':'Chọn điểm đầu tiên trên bản đồ rồi thêm các điểm tiếp theo.'}</small></div><button className="icon-button" type="button" aria-label="Thoát khỏi lệnh vẽ" title="Thoát khỏi lệnh vẽ" onClick={clearMeasurement}><X size={18}/></button></header><p>{measureMode==='line'?`Đã có ${measurePoints.length} điểm · ${formatDistance(measuredDistance)}`:`Đã có ${measurePoints.length} đỉnh${measurePoints.length>=3?` · khoảng ${formatArea(measuredArea)}`:''}`}</p><div className="map-action-options"><button type="button" className="button primary" disabled={measurePoints.length<(measureMode==='line'?2:3)} onClick={finishMeasurement}><Check size={17}/>{measureMode==='line'?'Kết thúc đo':'Hoàn tất diện tích'}</button><button type="button" className="button secondary" onClick={clearMeasurement}>Hủy phép đo</button></div><small className="map-panel-note">Esc hoặc nút × để thoát khỏi lệnh vẽ.</small></section>}
     {candidate&&<section className="map-candidate-card" role="status"><header className="map-panel-header"><strong>{candidateCommune?.name||'Điểm ngoài địa bàn hoặc sát ranh giới cần kiểm tra'}</strong><button className="icon-button" type="button" aria-label="Đóng điểm đang chọn" onClick={()=>setCandidate(null)}><X size={17}/></button></header><span>{candidate.position.lat.toFixed(6)}, {candidate.position.lng.toFixed(6)}</span>{candidate.accuracy!==undefined&&<small>Sai số vị trí thiết bị khoảng {Math.round(candidate.accuracy)} m. {candidate.accuracy>100?'Sai số lớn, hãy điều chỉnh ghim trước khi xác nhận.':'Hãy kiểm tra đây là vị trí công trình.'}</small>}<small>Kéo ghim để chỉnh điểm. Địa bàn gợi ý được máy chủ kiểm tra lại khi lưu.</small><div><button type="button" className="button primary" disabled={!candidateCommune} onClick={confirmCandidate}>Dùng điểm này</button><button type="button" className="button secondary" onClick={()=>{gpsRequest.current++;setLocating(false);setCandidate(null);}}>Hủy chọn điểm</button></div></section>}
-    {!selectionOnly&&workflowPosition&&workflowRole&&<section className="map-action-panel map-workflow-panel" role="region" aria-label="Chọn nghiệp vụ tại vị trí đã chọn"><header className="map-panel-header"><div><strong>Điểm đã xác nhận</strong><small>{resolveCommune(workflowPosition)?.name||'Kiểm tra lại xã/phường'}</small></div><button className="icon-button" type="button" aria-label="Đóng lựa chọn nghiệp vụ" onClick={()=>setWorkflowPosition(null)}><X size={18}/></button></header><p>{workflowPosition.lat.toFixed(6)}, {workflowPosition.lng.toFixed(6)}{measurementFinished?measurementType==='line'?` · Đoạn thẳng ${formatDistance(measuredDistance)}`:` · Diện tích khoảng ${formatArea(measuredArea)}`:''}</p><div className="map-action-options">{workflowRole==='citizen'?<button type="button" className="button primary" onClick={()=>chooseWorkflowAction('report')}><MapPin size={17}/>Gửi phản ánh tại đây</button>:<><button type="button" className="button secondary" onClick={()=>chooseWorkflowAction('inspect')}><Check size={17}/>Ghi nhận kiểm tra</button><button type="button" className="button primary" onClick={()=>chooseWorkflowAction('permit')}><MapPin size={17}/>Nhập GPXD tại đây</button></>}</div><small className="map-panel-note">Hồ sơ gắn tại điểm bắt đầu thao tác. Đường đo và diện tích là số liệu tham khảo trên bản đồ.</small></section>}
+    {!selectionOnly&&workflowPosition&&workflowRole&&<section className="map-action-panel map-workflow-panel" role="region" aria-label="Chọn nghiệp vụ tại vị trí đã chọn"><header className="map-panel-header"><div><strong>Điểm đã xác nhận</strong><small>{resolveCommune(workflowPosition)?.name||'Kiểm tra lại xã/phường'}</small></div><button className="icon-button" type="button" aria-label="Đóng lựa chọn nghiệp vụ" onClick={()=>setWorkflowPosition(null)}><X size={18}/></button></header><p>{workflowPosition.lat.toFixed(6)}, {workflowPosition.lng.toFixed(6)}{measurementFinished?measurementType==='line'?` · Đoạn thẳng ${formatDistance(measuredDistance)}`:` · Diện tích khoảng ${formatArea(measuredArea)}`:''}</p><div className="map-action-options">{workflowRole==='citizen'?<button type="button" className="button primary" onClick={()=>chooseWorkflowAction('report')}><MapPin size={17}/>Gửi phản ánh tại đây</button>:workflowRole==='admin'&&(!canCreateAtPosition||canCreateAtPosition(workflowPosition))?<><button type="button" className="button secondary" onClick={()=>chooseWorkflowAction('inspect')}><Check size={17}/>Ghi nhận kiểm tra</button><button type="button" className="button primary" onClick={()=>chooseWorkflowAction('permit')}><MapPin size={17}/>Nhập GPXD tại đây</button></>:<p className="map-panel-note">Tài khoản này chỉ lập hồ sơ trong xã/phường được giao; điểm này ở địa bàn khác nên chỉ xem được.</p>}</div><small className="map-panel-note">Hồ sơ gắn tại điểm bắt đầu thao tác. Đường đo và diện tích là số liệu tham khảo trên bản đồ.</small></section>}
     {!selectionOnly&&!selectedRecordId&&measurementFinished&&measurementType&&<section className="map-measurement-card" role="status"><button className="icon-button" type="button" aria-label="Xóa kết quả đo" title="Xóa kết quả đo" onClick={clearMeasurement}><X size={16}/></button><strong>{measurementType==='line'?`Độ dài: ${formatDistance(measuredDistance)}`:`Diện tích ước tính: ${formatArea(measuredArea)}`}</strong><small>Phép đo tham khảo; sẽ lưu cùng hồ sơ khi gửi biểu mẫu.</small></section>}
     {locationMessage&&<div className="map-source-notice" role="alert"><span>{locationMessage}</span><button type="button" className="icon-button" aria-label="Đóng thông báo vị trí" onClick={()=>setLocationMessage('')}><X size={16}/></button></div>}
     {activeBase.startsWith('google-') && <div className="map-provider-credit map-google-credit"><img src="/google-maps-logo.svg" alt="Google Maps" height={18} /><span>{copyright}</span></div>}

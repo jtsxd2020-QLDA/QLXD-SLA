@@ -16,11 +16,17 @@ npm run admin:create
 
 Nhập mật khẩu ít nhất 12 ký tự hai lần. Khi dùng Terminal tương tác, ký tự mật khẩu không hiện trên màn hình. Tài khoản là `admin@qlxd`; phần mềm chỉ lưu bản băm scrypt, không lưu mật khẩu gốc. Lệnh này chỉ tạo tài khoản lần đầu và từ chối tạo trùng. Sau đó chọn **Đăng nhập quản lý** trên trang và nhập tài khoản/mật khẩu vừa đặt.
 
+## Tài khoản và phạm vi quản lý
+
+Tài khoản khởi tạo `admin@qlxd` giữ quyền cấp tỉnh. Vào **Tài khoản và phân quyền** để tạo tài khoản riêng cho từng cán bộ, chọn **Cán bộ xã/phường** và đúng một địa bàn. Không dùng chung tài khoản cấp tỉnh cho các xã. Vai trò, địa bàn và trạng thái hoạt động lấy từ cơ sở dữ liệu của máy chủ, không nhận từ nội dung yêu cầu của người dùng.
+
+Khi nâng cấp, các phiên đăng nhập cũ không gắn tài khoản sẽ hết hiệu lực và cần đăng nhập lại. Tài khoản cũ ngoài `admin@qlxd` chưa được phân quyền bị khóa cho đến khi cấp tỉnh giao địa bàn. Không thay đổi mật khẩu đang dùng của tài khoản khởi tạo. Xem [hướng dẫn phân quyền](docs/RBAC_COMMUNE.md).
+
 ## Phạm vi bản đầu
 
 - Bản đồ công khai hiển thị điểm GPXD và mã/trạng thái phản ánh. API công khai không trả tên/số điện thoại người gửi, nội dung chi tiết, tên chủ đầu tư hoặc địa chỉ đầy đủ.
 - Người dân gửi phản ánh trực tiếp trên bản đồ, chọn điểm và xã/phường, nhận mã tiếp nhận. Cơ quan chuyên môn có thể xem nội dung và thông tin liên hệ trong không gian quản lý.
-- Tài khoản quản lý nhập GPXD, xem hồ sơ chi tiết và theo dõi các phản ánh đã nhận.
+- Tài khoản cấp tỉnh quản lý toàn tỉnh và phân quyền tài khoản. Cán bộ xã/phường có thể xem hồ sơ nội bộ toàn tỉnh ở chế độ chỉ đọc (ẩn tên/số điện thoại người phản ánh ngoài địa bàn), nhưng chỉ nhập và xử lý hồ sơ thuộc địa bàn được giao; máy chủ kiểm tra quyền trên mỗi yêu cầu ghi.
 - 75 ranh giới có nguồn và mã SHA-256 ở `geodata/provenance.json`; ranh giới tham khảo, chưa được xác nhận pháp lý. Nền mặc định là Google Hybrid, có lựa chọn Esri và OpenStreetMap.
 
 ## Dữ liệu và giới hạn triển khai
