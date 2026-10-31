@@ -6,6 +6,7 @@ import {isSyntheticRecord,recordKind,type ManagedRecord} from './record-lifecycl
 export function cloudEnabled(){const mode=process.env.TTXD_STORAGE_BACKEND;if(mode&&mode!=='sqlite'&&mode!=='supabase')throw new Error('Invalid storage backend');if(process.env.VERCEL==='1'&&mode!=='supabase')throw new Error('Cloud storage required on Vercel');return mode==='supabase';}
 async function backend(){return cloudEnabled()?cloud:import('./store');}
 export async function verifyAdminCredentials(email:string,password:string){return(await backend()).verifyAdminCredentials(email,password);}
+export async function authenticateAdminSession(email:string,password:string){return(await backend()).authenticateAdminSession(email,password);}
 export async function createAdminSession(email='admin@qlxd'){return(await backend()).createAdminSession(email);}
 export async function findAdminSession(token:string){return(await backend()).findAdminSession(token);}
 export async function deleteAdminSession(token:string){return(await backend()).deleteAdminSession(token);}

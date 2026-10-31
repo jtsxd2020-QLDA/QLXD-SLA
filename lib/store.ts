@@ -88,6 +88,19 @@ export function createAdminSession(email='admin@qlxd') {
     return { token, csrf, user };
   });
 }
+/** Password verification and insertion share a write transaction: a reset cannot
+ * interleave between them, even when separate SQLite processes are in use. */
+export function authenticateAdminSession(email:string,password:string) {
+  return transaction(()=>{
+    if(!verifyAdminCredentials(email,password)) return undefined;
+    const row=db().prepare('SELECT email,role,commune_code,active,created_at FROM admin_users WHERE email=?').get(email.trim().toLowerCase()) as AccountRow|undefined;
+    const user=accountIdentity(row); if(!user)return undefined;
+    const token=randomBytes(32).toString('base64url'),csrf=randomBytes(32).toString('base64url');
+    db().prepare('DELETE FROM admin_sessions WHERE expires < ?').run(Date.now());
+    db().prepare('INSERT INTO admin_sessions(hash,csrf,expires,user_email) VALUES(?,?,?,?)').run(digest(token),csrf,Date.now()+8*60*60*1000,user.email);
+    return {token,csrf,user};
+  });
+}
 export function findAdminSession(token: string):AuthSession|undefined {
   const row=db().prepare('SELECT s.csrf,s.expires,u.email,u.role,u.commune_code,u.active,u.created_at FROM admin_sessions s JOIN admin_users u ON u.email=s.user_email WHERE s.hash=? AND s.expires>?').get(digest(token),Date.now()) as (AccountRow & {csrf:string;expires:number})|undefined;
   const user=accountIdentity(row);

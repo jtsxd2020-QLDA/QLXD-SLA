@@ -34,7 +34,7 @@ export default function InspectionHistory({ inspections, state, onRetry, onInspe
               <div><dt>Kết quả</dt><dd>{inspectionResultLabel(inspection)}</dd></div>
               {inspection.legalBasis?<div><dt>Căn cứ pháp lý</dt><dd>{inspection.legalBasis}</dd></div>:null}
               {inspection.comparisonMaterials?<div><dt>Tài liệu/hồ sơ đối chiếu</dt><dd>{inspection.comparisonMaterials}</dd></div>:inspection.basis?<div><dt>Căn cứ cũ</dt><dd>{inspection.basis}</dd></div>:null}
-              {inspection.verified&&['wrong_permit','unlicensed','no_permit_presented'].includes(inspection.result)?<div><dt>Khắc phục</dt><dd>{getRemediationStatus(inspection)==='corrected'?'Đã khắc phục':getRemediationStatus(inspection)==='pending'?'Cần khắc phục':'Chưa áp dụng'}</dd></div>:null}
+              {inspection.verified&&['wrong_permit','unlicensed'].includes(inspection.result)?<div><dt>Khắc phục</dt><dd>{getRemediationStatus(inspection)==='corrected'?'Đã khắc phục':getRemediationStatus(inspection)==='pending'?'Cần khắc phục':'Chưa áp dụng'}</dd></div>:null}
               {inspection.notes ? <div><dt>Ghi chú</dt><dd>{inspection.notes}</dd></div> : null}
             </dl>
           </li>)}

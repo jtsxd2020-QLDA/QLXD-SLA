@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildInspectionIndex,formatInspectionDate,getRecordInspections,inspectionResultLabel,matchesInspectionFilter} from '../lib/inspection-status';
+import {buildInspectionIndex,formatInspectionDate,getRecordInspections,getRemediationStatus,inspectionResultLabel,matchesInspectionFilter} from '../lib/inspection-status';
 import type {Inspection} from '../lib/types';
 
 function inspection(patch:Partial<Inspection>={}):Inspection {
@@ -69,4 +69,10 @@ test('recorded/unrecorded filters never turn failed or loading inspection data i
     assert.equal(matchesInspectionFilter(index,'permit','permit-1','recorded',state),false);
     assert.equal(matchesInspectionFilter(index,'permit','permit-1','all',state),true);
   }
+});
+
+test('missing documents do not imply a violation or remediation, including legacy records',()=>{
+ assert.equal(getRemediationStatus(inspection({result:'no_permit_presented',verified:true})), 'not_applicable');
+ assert.equal(getRemediationStatus(inspection({result:'no_permit_presented',verified:true,remediationStatus:'pending'})), 'not_applicable');
+ assert.equal(getRemediationStatus(inspection({result:'unlicensed',verified:true})), 'pending');
 });

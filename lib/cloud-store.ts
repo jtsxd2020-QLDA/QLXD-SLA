@@ -21,6 +21,21 @@ export async function verifyAdminCredentials(email:string,password:string){
  const actual=scryptSync(password.slice(0,128),data?.salt||'00'.repeat(16),64),expected=Buffer.from(data?.password_hash||'00'.repeat(64),'hex');
  return !!accountIdentity(data as AccountRow|null)&&password.length<=128&&expected.length===actual.length&&timingSafeEqual(actual,expected);
 }
+/** The RPC takes a row lock and rechecks the verified hash before insertion.
+ * A concurrent password reset either precedes insertion or revokes this session. */
+export async function authenticateAdminSession(email:string,password:string){
+ const normalized=email.trim().toLowerCase();
+ const {data,error}=await db().from('ttxd_admin_users').select('email,salt,password_hash,role,commune_code,active,created_at').eq('email',normalized).maybeSingle();
+ if(error)failed(error);
+ const actual=scryptSync(password.slice(0,128),data?.salt||'00'.repeat(16),64),expected=Buffer.from(data?.password_hash||'00'.repeat(64),'hex');
+ if(!data||!accountIdentity(data as AccountRow)||password.length>128||expected.length!==actual.length||!timingSafeEqual(actual,expected))return undefined;
+ const token=randomBytes(32).toString('base64url'),csrf=randomBytes(32).toString('base64url'),expires=Date.now()+8*60*60*1000;
+ const result=await db().rpc('ttxd_create_verified_session',{p_email:normalized,p_expected_hash:data.password_hash,p_hash:digest(token),p_csrf:csrf,p_expires:expires});
+ if(result.error)failed(result.error);
+ if(result.data!==true)return undefined;
+ const session=await findAdminSession(token);
+ return session?{token,csrf,user:session.user}:undefined;
+}
 export async function createAdminSession(email='admin@qlxd'){
  const {data,error:accountError}=await db().from('ttxd_admin_users').select('email,role,commune_code,active,created_at').eq('email',email.trim().toLowerCase()).maybeSingle();
  if(accountError)failed(accountError);

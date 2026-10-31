@@ -109,9 +109,9 @@ async function main(){
     pass('commune analytics read province-wide and local snapshots, redact reporter identity from results and Excel/PDF exports, and hide it from search matching');
     const anonymousMap=await data<{records:{communeCode:string}[]}>(await send('/api/public/records'));
     assert.ok(anonymousMap.records.some(r=>r.communeCode===a.communeCode));assert.ok(anonymousMap.records.some(r=>r.communeCode===b.communeCode));
-    const ownMap=await data<{records:{communeCode:string}[]}>(await send('/api/public/records',undefined,authA));assert.ok(ownMap.records.every(r=>r.communeCode===a.communeCode));
+    const ownMap=await data<{records:{communeCode:string}[]}>(await send('/api/public/records',undefined,authA));assert.deepEqual(ownMap.records,anonymousMap.records);
     assert.equal(JSON.stringify(anonymousMap).includes('0987654321'),false);assert.equal(JSON.stringify(anonymousMap).includes('LocalContactAlpha'),false);
-    pass('anonymous users retain only redacted public records; logged-in commune public endpoint respects its assignment');
+    pass('public map remains identically redacted and province-wide for anonymous users and logged-in commune staff');
     const trash=await data<{version:number}>(await send('/api/record-lifecycle',{kind:'inspection',id:inspections[1].id,version:1,action:'trash'},province));
     await blocked(await send('/api/record-lifecycle',{kind:'inspection',id:inspections[1].id,version:trash.version,action:'restore'},authA));
     await data(await send('/api/record-lifecycle',{kind:'inspection',id:inspections[1].id,version:trash.version,action:'restore'},province));

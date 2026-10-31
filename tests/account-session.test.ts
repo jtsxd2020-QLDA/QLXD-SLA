@@ -56,6 +56,12 @@ test('province password reset replaces credentials and immediately invalidates e
   assert.equal('password' in returned,false);
   const fresh=store.createAdminSession(email);
   assert.equal(store.findAdminSession(fresh.token)?.user.email,email);
+  assert.equal(store.authenticateAdminSession(email,password),undefined);
+  const authenticated=store.authenticateAdminSession(email,nextPassword);
+  assert.ok(authenticated);
+  store.updateManagedAccount({email,role:'commune',communeCode:'03664',active:true,password:'Another-new-password-2026!'});
+  assert.equal(store.findAdminSession(authenticated.token),undefined);
+  assert.equal(store.authenticateAdminSession(email,nextPassword),undefined);
 });
 
 test('managed account listing is a whitelist without salts or password material',()=>{

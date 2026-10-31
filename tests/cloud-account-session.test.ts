@@ -14,11 +14,19 @@ test('cloud account adapter binds sessions, reads current scope each time and ne
   const accounts = new Map<string, Row>();
   const sessions = new Map<string, Row>();
   const reads: string[] = [];
+  let resetDuringLogin = false;
   const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
   globalThis.fetch = async (input, options = {}) => {
     const url = new URL(String(input));
     const table = url.pathname.split('/').at(-1);
     const method = options.method || 'GET';
+    if (table === 'ttxd_create_verified_session') {
+      const args=JSON.parse(String(options.body)),account=accounts.get(args.p_email)!;
+      if(resetDuringLogin){resetDuringLogin=false;account.salt='11'.repeat(16);account.password_hash=scryptSync('Changed-during-login-2026!',String(account.salt),64).toString('hex');}
+      if(!account.active||account.password_hash!==args.p_expected_hash)return response(false);
+      sessions.set(args.p_hash,{hash:args.p_hash,csrf:args.p_csrf,expires:args.p_expires,user_email:args.p_email});
+      return response(true);
+    }
     if (table === 'ttxd_admin_users') {
       if (method === 'POST') { const row = JSON.parse(String(options.body)); accounts.set(row.email, row); return response(null, 201); }
       const email = url.searchParams.get('email')?.slice(3);
@@ -69,6 +77,14 @@ test('cloud account adapter binds sessions, reads current scope each time and ne
     assert.equal(await cloud.verifyAdminCredentials('staff@qa', resetPassword), true);
     assert.equal('password' in resetResult, false);
     assert.equal('password_hash' in resetResult, false);
+    const countBeforeRace=sessions.size;
+    resetDuringLogin=true;
+    assert.equal(await cloud.authenticateAdminSession('staff@qa',resetPassword),undefined,'a reset after password verification must prevent insertion of a stale session');
+    assert.equal(sessions.size,countBeforeRace);
+    assert.equal(await cloud.authenticateAdminSession('staff@qa',resetPassword),undefined);
+    const afterRace=await cloud.authenticateAdminSession('staff@qa','Changed-during-login-2026!');
+    assert.ok(afterRace);
+    assert.equal((await cloud.findAdminSession(afterRace.token))?.user.email,'staff@qa');
     assert.ok(reads.filter(email => email === 'staff@qa').length >= 5);
     const legacy = 'legacy-unbound-session';
     sessions.set(createHash('sha256').update(legacy).digest('hex'), { csrf: 'legacy', expires: Date.now() + 60_000 });
