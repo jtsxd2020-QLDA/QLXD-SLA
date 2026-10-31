@@ -1,4 +1,4 @@
-import { accountIdentity, managedAccount, validateAccountInput, validateAccountUpdate, type AccountRow } from './account-validation';
+import { accountIdentity, defaultCommuneAccounts, managedAccount, validateAccountInput, validateAccountUpdate, type AccountRow } from './account-validation';
 import {publicMeasurement} from './record-measurement';
 import {WorkflowError,statusRecord,permitProgressRecord,metadata,inspectionSource} from './workflow';
 import { DatabaseSync } from 'node:sqlite';
@@ -115,6 +115,33 @@ export function createManagedAccount(input:AccountInput){
   try{db().prepare('INSERT INTO admin_users(email,salt,password_hash,created_at,role,commune_code,active) VALUES(?,?,?,?,?,?,1)').run(value.email,salt,passwordHash,createdAt,value.role,value.communeCode);}
   catch(error){if(error instanceof Error&&error.message.includes('UNIQUE constraint failed: admin_users.email'))throw new WorkflowError(409,'Tài khoản đã tồn tại.');throw error;}
   return {email:value.email,role:value.role,communeCode:value.communeCode,active:true,createdAt};
+}
+export function createDefaultCommuneAccounts(){
+  const desired=defaultCommuneAccounts();
+  return transaction(()=>{
+    const existing=db().prepare('SELECT email,role,commune_code,active,created_at FROM admin_users').all() as AccountRow[];
+    const byEmail=new Map(existing.map(row=>[row.email.toLowerCase(),row]));
+    let created=0,skipped=0;const conflicts:string[]=[];
+    for(const account of desired){
+      const row=byEmail.get(account.email);
+      if(row){if(row.role==='commune'&&row.commune_code===account.communeCode)skipped++;else conflicts.push(account.email);continue;}
+      const salt=randomBytes(16).toString('hex'),passwordHash=scryptSync(account.password,salt,64).toString('hex'),createdAt=new Date().toISOString();
+      db().prepare('INSERT INTO admin_users(email,salt,password_hash,created_at,role,commune_code,active) VALUES(?,?,?,?,?,?,1)').run(account.email,salt,passwordHash,createdAt,account.role,account.communeCode);
+      created++;
+    }
+    return{created,skipped,conflicts};
+  });
+}
+export function changeOwnPassword(email:string,currentPassword:string,newPassword:string){
+  return transaction(()=>{
+    const normalized=email.trim().toLowerCase();
+    const row=db().prepare('SELECT email,salt,password_hash,role,commune_code,active,created_at FROM admin_users WHERE email=?').get(normalized) as (AccountRow&{salt:string;password_hash:string})|undefined;
+    const actual=scryptSync(currentPassword.slice(0,128),row?.salt||'00'.repeat(16),64),expected=Buffer.from(row?.password_hash||'00'.repeat(64),'hex');
+    if(!accountIdentity(row)||currentPassword.length>128||expected.length!==actual.length||!timingSafeEqual(actual,expected))throw new WorkflowError(401,'Mật khẩu hiện tại không đúng.');
+    const salt=randomBytes(16).toString('hex'),passwordHash=scryptSync(newPassword,salt,64).toString('hex');
+    db().prepare('UPDATE admin_users SET salt=?,password_hash=? WHERE email=?').run(salt,passwordHash,normalized);
+    db().prepare('UPDATE admin_sessions SET expires=0 WHERE user_email=?').run(normalized);
+  });
 }
 export function updateManagedAccount(input:AccountUpdateInput){
   const value=validateAccountUpdate(input);
