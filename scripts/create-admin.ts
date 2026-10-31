@@ -13,7 +13,7 @@ function secretPrompt(label:string){
 async function main(){
   if(!stdin.isTTY||!(stdin as NodeJS.ReadStream).setRawMode)throw new Error('Hãy chạy lệnh trong Terminal tương tác để nhập mật khẩu an toàn.');
   stdout.write('Tạo tài khoản quản lý admin@qlxd\n');
-  const password=await secretPrompt('Nhập mật khẩu (tối thiểu 12 ký tự): ');
+  const password=await secretPrompt('Nhập mật khẩu (tối thiểu 8 ký tự): ');
   const confirmation=await secretPrompt('Nhập lại mật khẩu: ');
   if(password!==confirmation) throw new Error('Hai mật khẩu chưa khớp.');
   createAdminAccount('admin@qlxd',password);
