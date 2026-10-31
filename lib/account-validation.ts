@@ -6,7 +6,7 @@ import type { AccountInput, AccountUpdateInput, ManagedAccount, UserIdentity } f
 const communeCodes = new Set(communes.map(commune => commune.code));
 const accountEmail = z.string().trim().toLowerCase().min(3).max(200).regex(/^[^\s@]+@[^\s@]+$/, 'Tài khoản phải có dạng tên@đơn-vị.').refine(value => [...value].every(character => character.charCodeAt(0) >= 33 && character.charCodeAt(0) !== 127));
 const scope = { email: accountEmail, role: z.enum(['province', 'commune']), communeCode: z.string().max(20).nullable() };
-const createSchema = z.object({ ...scope, password: z.string().min(12).max(128) }).strict();
+const createSchema = z.object({ ...scope, password: z.string().min(8).max(128) }).strict();
 const updateSchema = z.object({ ...scope, active: z.boolean(), password: z.string().max(128).optional() }).strict();
 
 function validScope(value: {role: string; communeCode: string | null}) {
@@ -15,14 +15,14 @@ function validScope(value: {role: string; communeCode: string | null}) {
 
 export function validateAccountInput(input: unknown): AccountInput {
   const result = createSchema.safeParse(input);
-  if (!result.success || !validScope(result.data)) throw new WorkflowError(422, 'Tài khoản, mật khẩu hoặc địa bàn phân quyền không hợp lệ. Mật khẩu cần từ 12 đến 128 ký tự.');
+  if (!result.success || !validScope(result.data)) throw new WorkflowError(422, 'Tài khoản, mật khẩu hoặc địa bàn phân quyền không hợp lệ. Mật khẩu cần từ 8 đến 128 ký tự.');
   return result.data;
 }
 
 export function validateAccountUpdate(input: unknown): AccountUpdateInput {
   const result = updateSchema.safeParse(input);
   if (!result.success || !validScope(result.data)) throw new WorkflowError(422, 'Thông tin phân quyền không hợp lệ. Cán bộ xã phải được giao đúng một xã/phường.');
-  if (result.data.password !== undefined && result.data.password !== '' && result.data.password.length < 12) throw new WorkflowError(422, 'Mật khẩu mới cần từ 12 đến 128 ký tự.');
+  if (result.data.password !== undefined && result.data.password !== '' && result.data.password.length < 8) throw new WorkflowError(422, 'Mật khẩu mới cần từ 8 đến 128 ký tự.');
   if (result.data.email === 'admin@qlxd' && (result.data.role !== 'province' || !result.data.active)) throw new WorkflowError(422, 'Không được khóa hoặc hạ quyền tài khoản khởi tạo cấp tỉnh.');
   return { ...result.data, password: result.data.password || undefined };
 }

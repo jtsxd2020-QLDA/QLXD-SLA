@@ -58,7 +58,7 @@ export function decrypt(value: string) {
 export function createAdminAccount(email: string, password: string) {
   const normalizedEmail = email.trim().toLocaleLowerCase('en-US');
   if (normalizedEmail !== 'admin@qlxd') throw new Error('Tài khoản khởi tạo phải là admin@qlxd.');
-  if (password.length < 12 || password.length > 128) throw new Error('Mật khẩu phải dài từ 12 đến 128 ký tự.');
+  if (password.length < 8 || password.length > 128) throw new Error('Mật khẩu phải dài từ 8 đến 128 ký tự.');
   const salt = randomBytes(16).toString('hex');
   const passwordHash = scryptSync(password, salt, 64).toString('hex');
   try {

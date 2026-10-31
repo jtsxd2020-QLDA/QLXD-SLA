@@ -1,15 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountIdentity,validateAccountUpdate} from '../lib/account-validation';
+import {accountIdentity,validateAccountInput,validateAccountUpdate} from '../lib/account-validation';
 import {WorkflowError} from '../lib/workflow';
 
 const input={email:'canbo@qlxd.test',role:'commune' as const,communeCode:'03664',active:true};
+const createInput={email:'canbo@qlxd.test',role:'commune' as const,communeCode:'03664'};
+
+test('account creation accepts eight characters and rejects shorter passwords',()=>{
+  assert.equal(validateAccountInput({...createInput,password:'12345678'}).password,'12345678');
+  assert.throws(()=>validateAccountInput({...createInput,password:'1234567'}),error=>error instanceof WorkflowError&&error.status===422);
+});
 
 test('blank or omitted account password means no reset; a supplied reset password must meet policy',()=>{
   assert.equal(validateAccountUpdate(input).password,undefined);
   assert.equal(validateAccountUpdate({...input,password:''}).password,undefined);
+  assert.equal(validateAccountUpdate({...input,password:'12345678'}).password,'12345678');
   assert.equal(validateAccountUpdate({...input,password:'Valid-new-pass-2026!'}).password,'Valid-new-pass-2026!');
-  assert.throws(()=>validateAccountUpdate({...input,password:'too-short'}),error=>error instanceof WorkflowError&&error.status===422);
+  assert.throws(()=>validateAccountUpdate({...input,password:'1234567'}),error=>error instanceof WorkflowError&&error.status===422);
 });
 
 test('bootstrap admin identity requires an active province role with no commune assignment',()=>{
