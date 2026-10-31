@@ -7,7 +7,7 @@ const communeCodes = new Set(communes.map(commune => commune.code));
 export const DEFAULT_ACCOUNT_PASSWORD = 'qlxd@2026';
 export function defaultCommuneAccounts() {
   return communes.map(commune => {
-    const local = commune.name.replace(/^(xã|phường)\\s+/i, '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const local = commune.name.replace(/^(xã|phường)\s+/i, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
     return { email: local + '@qlxd', role: 'commune' as const, communeCode: commune.code, password: DEFAULT_ACCOUNT_PASSWORD };
   });
 }
