@@ -1,4 +1,4 @@
-import { accountIdentity, managedAccount, validateAccountInput, validateAccountUpdate, type AccountRow } from './account-validation';
+import { accountIdentity, defaultCommuneAccounts, managedAccount, validateAccountInput, validateAccountUpdate, type AccountRow } from './account-validation';
 import {WorkflowError,statusRecord,permitProgressRecord,metadata,inspectionSource} from './workflow';
 import {createClient, type SupabaseClient} from '@supabase/supabase-js';
 import {randomBytes,randomUUID,createHash,createCipheriv,createDecipheriv,scryptSync,timingSafeEqual} from 'node:crypto';
@@ -71,6 +71,28 @@ export async function createManagedAccount(input:AccountInput){
  const {error}=await db().from('ttxd_admin_users').insert({email:value.email,salt,password_hash:passwordHash,role:value.role,commune_code:value.communeCode,active:true,created_at:createdAt});
  if(error?.code==='23505')throw new WorkflowError(409,'Tài khoản đã tồn tại.');if(error)failed(error);
  return{email:value.email,role:value.role,communeCode:value.communeCode,active:true,createdAt};
+}
+export async function createDefaultCommuneAccounts(){
+ const desired=defaultCommuneAccounts(),accounts=await listManagedAccounts(),byEmail=new Map(accounts.map(account=>[account.email.toLowerCase(),account]));
+ let created=0,skipped=0;const conflicts:string[]=[],rows=[];
+ for(const account of desired){
+  const existing=byEmail.get(account.email);
+  if(existing){if(existing.role==='commune'&&existing.communeCode===account.communeCode)skipped++;else conflicts.push(account.email);continue;}
+  const salt=randomBytes(16).toString('hex'),passwordHash=scryptSync(account.password,salt,64).toString('hex');
+  rows.push({email:account.email,salt,password_hash:passwordHash,role:account.role,commune_code:account.communeCode,active:true,created_at:new Date().toISOString()});
+ }
+ if(rows.length){const {error}=await db().from('ttxd_admin_users').insert(rows);if(error)failed(error);created=rows.length;}
+ return{created,skipped,conflicts};
+}
+export async function changeOwnPassword(email:string,currentPassword:string,newPassword:string){
+ const normalized=email.trim().toLowerCase();
+ const {data,error}=await db().from('ttxd_admin_users').select('email,salt,password_hash,role,commune_code,active,created_at').eq('email',normalized).maybeSingle();
+ if(error)failed(error);
+ const actual=scryptSync(currentPassword.slice(0,128),data?.salt||'00'.repeat(16),64),expected=Buffer.from(data?.password_hash||'00'.repeat(64),'hex');
+ if(!data||!accountIdentity(data as AccountRow)||currentPassword.length>128||expected.length!==actual.length||!timingSafeEqual(actual,expected))throw new WorkflowError(401,'Mật khẩu hiện tại không đúng.');
+ const salt=randomBytes(16).toString('hex'),passwordHash=scryptSync(newPassword,salt,64).toString('hex');
+ const {data:updated,error:updateError}=await db().from('ttxd_admin_users').update({salt,password_hash:passwordHash}).eq('email',normalized).eq('password_hash',data.password_hash).select('email').maybeSingle();
+ if(updateError)failed(updateError);if(!updated)throw new WorkflowError(404,'Không tìm thấy tài khoản.');
 }
 export async function updateManagedAccount(input:AccountUpdateInput){
  const value=validateAccountUpdate(input);

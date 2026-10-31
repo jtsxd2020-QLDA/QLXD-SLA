@@ -33,3 +33,5 @@ export async function updateRecordSource(kind:'permit'|'report'|'inspection',id:
 export async function listManagedAccounts(){return(await backend()).listManagedAccounts();}
 export async function createManagedAccount(input:AccountInput){return(await backend()).createManagedAccount(input);}
 export async function updateManagedAccount(input:AccountUpdateInput){return(await backend()).updateManagedAccount(input);}
+export async function createDefaultCommuneAccounts(){return(await backend()).createDefaultCommuneAccounts();}
+export async function changeOwnPassword(email:string,currentPassword:string,newPassword:string){return(await backend()).changeOwnPassword(email,currentPassword,newPassword);}

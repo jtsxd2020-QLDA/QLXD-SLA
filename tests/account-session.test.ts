@@ -64,6 +64,27 @@ test('province password reset replaces credentials and immediately invalidates e
   assert.equal(store.authenticateAdminSession(email,nextPassword),undefined);
 });
 
+test('staff can voluntarily change their own password and previous sessions expire',()=>{
+  const email='self-change@qlxd.test',next='Changed-by-staff-2026!';
+  store.createManagedAccount({email,password,role:'commune',communeCode:'03664'});
+  const old=store.createAdminSession(email);
+  assert.throws(()=>store.changeOwnPassword(email,'wrong-current-password',next));
+  assert.equal(store.verifyAdminCredentials(email,password),true);
+  store.changeOwnPassword(email,password,next);
+  assert.equal(store.findAdminSession(old.token),undefined);
+  assert.equal(store.verifyAdminCredentials(email,password),false);
+  assert.equal(store.verifyAdminCredentials(email,next),true);
+});
+
+test('bulk default commune account creation is complete, idempotent and preserves existing accounts',()=>{
+  const existingCount=store.listManagedAccounts().length;
+  const first=store.createDefaultCommuneAccounts();
+  assert.deepEqual(first,{created:75,skipped:0,conflicts:[]});
+  assert.equal(store.verifyAdminCredentials('tohieu@qlxd','qlxd@2026'),true);
+  assert.deepEqual(store.createDefaultCommuneAccounts(),{created:0,skipped:75,conflicts:[]});
+  assert.equal(store.listManagedAccounts().length,existingCount+75);
+});
+
 test('managed account listing is a whitelist without salts or password material',()=>{
   const listed=store.listManagedAccounts();
   assert.ok(listed.some(account=>account.email==='admin@qlxd'));

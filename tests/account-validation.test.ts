@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountIdentity,validateAccountInput,validateAccountUpdate} from '../lib/account-validation';
+import {accountIdentity,defaultCommuneAccounts,validateAccountInput,validateAccountUpdate} from '../lib/account-validation';
 import {WorkflowError} from '../lib/workflow';
 
 const input={email:'canbo@qlxd.test',role:'commune' as const,communeCode:'03664',active:true};
@@ -17,6 +17,15 @@ test('blank or omitted account password means no reset; a supplied reset passwor
   assert.equal(validateAccountUpdate({...input,password:'12345678'}).password,'12345678');
   assert.equal(validateAccountUpdate({...input,password:'Valid-new-pass-2026!'}).password,'Valid-new-pass-2026!');
   assert.throws(()=>validateAccountUpdate({...input,password:'1234567'}),error=>error instanceof WorkflowError&&error.status===422);
+});
+
+test('default commune accounts cover all 75 localities with unique usernames and the requested password',()=>{
+  const accounts=defaultCommuneAccounts();
+  assert.equal(accounts.length,75);
+  assert.equal(new Set(accounts.map(account=>account.email)).size,75);
+  assert.equal(accounts.find(account=>account.communeCode==='03646')?.email,'tohieu@qlxd');
+  assert.ok(accounts.every(account=>account.password==='qlxd@2026'&&account.role==='commune'));
+  assert.equal(validateAccountInput(accounts[0]).password,'qlxd@2026');
 });
 
 test('bootstrap admin identity requires an active province role with no commune assignment',()=>{
