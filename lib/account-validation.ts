@@ -4,6 +4,13 @@ import { WorkflowError } from './workflow';
 import type { AccountInput, AccountUpdateInput, ManagedAccount, UserIdentity } from './types';
 
 const communeCodes = new Set(communes.map(commune => commune.code));
+export const DEFAULT_ACCOUNT_PASSWORD = 'qlxd@2026';
+export function defaultCommuneAccounts() {
+  return communes.map(commune => {
+    const local = commune.name.replace(/^(xã|phường)\\s+/i, '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return { email: local + '@qlxd', role: 'commune' as const, communeCode: commune.code, password: DEFAULT_ACCOUNT_PASSWORD };
+  });
+}
 const accountEmail = z.string().trim().toLowerCase().min(3).max(200).regex(/^[^\s@]+@[^\s@]+$/, 'Tài khoản phải có dạng tên@đơn-vị.').refine(value => [...value].every(character => character.charCodeAt(0) >= 33 && character.charCodeAt(0) !== 127));
 const scope = { email: accountEmail, role: z.enum(['province', 'commune']), communeCode: z.string().max(20).nullable() };
 const createSchema = z.object({ ...scope, password: z.string().min(8).max(128) }).strict();
