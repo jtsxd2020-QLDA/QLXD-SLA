@@ -2,6 +2,7 @@
 
 import { ClipboardCheck, Plus, RotateCw } from 'lucide-react';
 import InspectionBadge from './InspectionBadge';
+import AttachmentManager from './AttachmentManager';
 import { formatInspectionDate, getLatestVerifiedInspection, getRemediationStatus, inspectionMapStatusLabel, inspectionResultLabel } from '@/lib/inspection-status';
 import type { Inspection } from '@/lib/types';
 
@@ -10,11 +11,13 @@ type InspectionHistoryProps = {
   state: 'loading' | 'error' | 'ready';
   onRetry: () => void;
   onInspect?: () => void;
+  csrfToken?: string;
+  canViewAttachments?: boolean;
 };
 
 const sourceLabels = { real: 'Dữ liệu thực tế', demo: 'Dữ liệu minh họa', unknown: 'Nguồn chưa xác định' };
 
-export default function InspectionHistory({ inspections, state, onRetry, onInspect }: InspectionHistoryProps) {
+export default function InspectionHistory({ inspections, state, onRetry, onInspect, csrfToken, canViewAttachments=false }: InspectionHistoryProps) {
   const latest = state === 'ready' ? inspections[0] : undefined;
   const latestVerified = state === 'ready' ? getLatestVerifiedInspection(inspections) : undefined;
   return <section className="inspection-history" aria-label="Kiểm tra thực địa của hồ sơ">
@@ -36,7 +39,7 @@ export default function InspectionHistory({ inspections, state, onRetry, onInspe
               {inspection.comparisonMaterials?<div><dt>Tài liệu/hồ sơ đối chiếu</dt><dd>{inspection.comparisonMaterials}</dd></div>:inspection.basis?<div><dt>Căn cứ cũ</dt><dd>{inspection.basis}</dd></div>:null}
               {inspection.verified&&['wrong_permit','unlicensed'].includes(inspection.result)?<div><dt>Khắc phục</dt><dd>{getRemediationStatus(inspection)==='corrected'?'Đã khắc phục':getRemediationStatus(inspection)==='pending'?'Cần khắc phục':'Chưa áp dụng'}</dd></div>:null}
               {inspection.notes ? <div><dt>Ghi chú</dt><dd>{inspection.notes}</dd></div> : null}
-            </dl>
+            </dl>{canViewAttachments?<AttachmentManager key={'inspection-files:'+inspection.id} recordKind="inspection" recordId={inspection.id} csrfToken={csrfToken} canUpload={!!onInspect}/>:null}
           </li>)}
         </ol>
       </details>
