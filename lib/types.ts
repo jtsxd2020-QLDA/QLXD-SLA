@@ -6,7 +6,7 @@ export type ConstructionStatusEvent = { at: string; actor: string; from: Constru
 export type PermitInput = {
   permitNumber: string; issueDate: string; issuingAuthority: string;
   investorName: string; investorPhone?: string; projectName: string; address: string; communeCode: string;
-  lat: number; lng: number; measurement?: RecordMeasurement; area: number; floors: number;
+  lat: number; lng: number; measurement?: RecordMeasurement; area: number; floors: number; buildingHeight?: number; redLineBoundary?: string; buildingLine?: string;
   constructionType: 'new' | 'renovation'; notes: string; constructionStatus?: ConstructionStatus;
 };
 export type ReportInput = {
@@ -16,7 +16,7 @@ export type ReportInput = {
 };
 export type Permit = PermitInput & { id: string; createdAt: string; status: 'active'; source?:DataSource; version?:number; progressHistory?:ConstructionStatusEvent[]; deletedAt?:string; deletedBy?:string };
 export type CitizenReport = ReportInput & { id: string; publicCode: string; createdAt: string; status: 'received' | 'processing' | 'resolved'; source?:DataSource; version?:number; history?:StatusEvent[]; historyStartedAt?:string; result?:string; completedAt?:string; deletedAt?:string; deletedBy?:string };
-export type MapRecord = { id: string; kind: 'permit' | 'report' | 'inspection'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string; constructionStatus?:ConstructionStatus; measurement?:RecordMeasurement; hasInspection?:boolean; hasVerifiedInspection?:boolean; latestInspectionResult?:InspectionResult; latestVerifiedResult?:InspectionResult; remediationStatus?:RemediationStatus; inspection?:Inspection };
+export type MapRecord = { id: string; kind: 'permit' | 'report' | 'inspection'; title: string; subtitle: string; communeCode: string; lat: number; lng: number; status: string; constructionStatus?:ConstructionStatus; issueDate?:string; area?:number; floors?:number; buildingHeight?:number; redLineBoundary?:string; buildingLine?:string; measurement?:RecordMeasurement; hasInspection?:boolean; hasVerifiedInspection?:boolean; latestInspectionResult?:InspectionResult; latestVerifiedResult?:InspectionResult; remediationStatus?:RemediationStatus; inspection?:Inspection };
 export type RecordsResponse = { permits: Permit[]; reports: CitizenReport[] };
 export type ApiResult<T> = { data: T } | { error: string; fields?: Record<string, string> };
 export type UserRole = 'province' | 'commune';
@@ -35,6 +35,8 @@ export type RemediationStatus='not_applicable'|'pending'|'corrected';
 export type InspectionInput={permitId?:string;reportId?:string;priorInspectionId?:string;siteKey:string;address:string;communeCode:string;lat:number;lng:number;inspectionDate:string;inspector:string;result:InspectionResult;verified:boolean;basis:string;legalBasis?:string;comparisonMaterials?:string;remediationStatus?:RemediationStatus;notes:string};
 export type Inspection=InspectionInput & {id:string;createdAt:string;source:DataSource;version:number;deletedAt?:string;deletedBy?:string};
 export type RecordKind='permit'|'report'|'inspection';
+export type AttachmentKind='permit'|'inspection';
+export type RecordAttachment={id:string;recordKind:AttachmentKind;recordId:string;fileName:string;contentType:string;sizeBytes:number;uploadedAt:string;capturedAt?:string;capturedLat?:number;capturedLng?:number};
 export type RecordLifecycleInput={kind:RecordKind;id:string;version:number;action:'trash'|'restore'};
 export type LifecycleRecordSummary={id:string;kind:RecordKind;identifier:string;title:string;communeCode:string;createdAt:string;deletedAt?:string;version:number;synthetic:boolean};
 export type RecordLifecycleResponse={active:LifecycleRecordSummary[];trash:LifecycleRecordSummary[];syntheticCount:number};

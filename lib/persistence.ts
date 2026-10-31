@@ -1,6 +1,6 @@
 import {publicMeasurement} from './record-measurement';
 import * as cloud from './cloud-store';
-import type {PermitInput,ReportInput,MapRecord,Idempotency,StatusInput,PermitProgressInput,InspectionInput,AnalyticsSnapshot,RecordLifecycleInput,RecordKind,AccountInput,AccountUpdateInput} from './types';
+import type {PermitInput,ReportInput,MapRecord,Idempotency,StatusInput,PermitProgressInput,InspectionInput,AnalyticsSnapshot,RecordLifecycleInput,RecordKind,AccountInput,AccountUpdateInput,AttachmentKind,RecordAttachment} from './types';
 import {WorkflowError} from './workflow';
 import {isSyntheticRecord,recordKind,type ManagedRecord} from './record-lifecycle';
 export function cloudEnabled(){const mode=process.env.TTXD_STORAGE_BACKEND;if(mode&&mode!=='sqlite'&&mode!=='supabase')throw new Error('Invalid storage backend');if(process.env.VERCEL==='1'&&mode!=='supabase')throw new Error('Cloud storage required on Vercel');return mode==='supabase';}
@@ -13,7 +13,7 @@ export async function deleteAdminSession(token:string){return(await backend()).d
 export async function listRecords(includeDeleted=false){return(await backend()).listRecords(includeDeleted);}
 export async function insertPermit(input:PermitInput,request?:Idempotency){return(await backend()).insertPermit(input,request);}
 export async function insertReport(input:ReportInput,request?:Idempotency){return(await backend()).insertReport(input,request);}
-export async function listPublicMapRecords():Promise<MapRecord[]>{const {permits,reports}=await listRecords();return[...permits.map(r=>({...publicMeasurement(r),id:r.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:r.permitNumber,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status,constructionStatus:r.constructionStatus||'uninspected'})),...reports.map(r=>({...publicMeasurement(r),id:r.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:r.publicCode,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status}))];}
+export async function listPublicMapRecords():Promise<MapRecord[]>{const {permits,reports}=await listRecords();return[...permits.map(r=>({...publicMeasurement(r),id:r.id,kind:'permit' as const,title:'Công trình có giấy phép',subtitle:r.permitNumber,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status,constructionStatus:r.constructionStatus||'uninspected',issueDate:r.issueDate,area:r.area,floors:r.floors,buildingHeight:r.buildingHeight,redLineBoundary:r.redLineBoundary,buildingLine:r.buildingLine})),...reports.map(r=>({...publicMeasurement(r),id:r.id,kind:'report' as const,title:'Phản ánh đã tiếp nhận',subtitle:r.publicCode,communeCode:r.communeCode,lat:r.lat,lng:r.lng,status:r.status}))];}
 export const consumeCloudRateLimit=cloud.consumeRateLimit;
 
 export async function listInspections(includeDeleted=false){return(await backend()).listInspections(includeDeleted);}
@@ -22,6 +22,13 @@ export async function trashMarkedSamples(){const store=await backend();const [{p
 export async function getRecordLifecycleData(){const store=await backend();const [{permits,reports},inspections]=await Promise.all([store.listRecords(true),store.listInspections(true)]);const fakePermitIds=new Set(permits.filter(isSyntheticRecord).map(record=>record.id)),fakeReportIds=new Set(reports.filter(isSyntheticRecord).map(record=>record.id));const managed:ManagedRecord[]=[...permits,...reports,...inspections];const active=managed.filter(record=>!record.deletedAt).map(record=>lifecycleSummary(record,isSyntheticRecord(record)||(recordKind(record)==='inspection'&&((record as import('./types').Inspection).permitId?fakePermitIds.has((record as import('./types').Inspection).permitId!):(record as import('./types').Inspection).reportId?fakeReportIds.has((record as import('./types').Inspection).reportId!):false))));const trash=managed.filter(record=>record.deletedAt).map(record=>lifecycleSummary(record,false));return{active,trash,syntheticCount:active.filter(record=>record.synthetic).length};}
 function lifecycleSummary(record:ManagedRecord,synthetic:boolean){const kind=recordKind(record);const identifier=kind==='permit'?(record as import('./types').Permit).permitNumber:kind==='report'?(record as import('./types').CitizenReport).publicCode:(record as import('./types').Inspection).siteKey;const title=kind==='permit'?(record as import('./types').Permit).projectName:kind==='report'?(record as import('./types').CitizenReport).title:`Kiểm tra ngày ${(record as import('./types').Inspection).inspectionDate}`;return{id:record.id,kind,identifier,title,communeCode:record.communeCode,createdAt:record.createdAt,deletedAt:record.deletedAt,version:record.version||1,synthetic};}
 export async function insertInspection(input:InspectionInput,request?:Idempotency){return(await backend()).insertInspection(input,request);}
+function attachmentBackend(){if(!cloudEnabled())throw new WorkflowError(501,'Tệp đính kèm yêu cầu kho lưu trữ đám mây của hệ thống.');return cloud;}
+export async function createAttachmentUpload(input:Parameters<typeof cloud.createAttachmentUpload>[0]){return attachmentBackend().createAttachmentUpload(input);}
+export async function listRecordAttachments(kind:AttachmentKind,id:string):Promise<RecordAttachment[]>{return attachmentBackend().listRecordAttachments(kind,id);}
+export async function getAttachment(id:string){return attachmentBackend().getAttachment(id);}
+export async function completeAttachmentUpload(id:string){return attachmentBackend().completeAttachmentUpload(id);}
+export async function abortAttachmentUpload(id:string){return attachmentBackend().abortAttachmentUpload(id);}
+export async function createAttachmentDownloadUrl(id:string){return attachmentBackend().createAttachmentDownloadUrl(id);}
 export async function updateReportStatus(input:StatusInput,actor?:string){return(await backend()).updateReportStatus(input,actor);}
 export async function updatePermitProgress(input:PermitProgressInput,actor?:string){return(await backend()).updatePermitProgress(input,actor);}
 export async function saveAnalyticsSnapshot(snapshot:AnalyticsSnapshot){return(await backend()).saveAnalyticsSnapshot(snapshot);}
