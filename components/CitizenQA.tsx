@@ -17,9 +17,34 @@ export default function CitizenQA() {
   const entries = useMemo(() => searchQAKnowledge(query), [query]);
 
   return <section className="panel citizen-qa" aria-labelledby="citizen-qa-title">
-    <div className="section-heading"><div><span className="eyebrow">HỎI ĐÁP</span><h2 id="citizen-qa-title">Hướng dẫn người dân</h2><p className="muted">Câu trả lời được trích từ tài liệu hướng dẫn, kèm nguồn.</p></div></div>
-    <label className="search-box citizen-qa-search"><Search size={17} aria-hidden="true"/><input type="search" aria-label="Tìm trong câu hỏi thường gặp" placeholder="Tìm gửi phản ánh, vị trí, mã tiếp nhận…" value={query} onChange={event => setQuery(event.target.value)}/></label>
-    {entries.length ? <div className="citizen-qa-list">{entries.map(entry => <details key={entry.id} className="citizen-qa-item"><summary>{entry.question}</summary><p className="citizen-qa-answer">{renderAnswer(entry.answer)}</p><p className="citizen-qa-source"><strong>Nguồn:</strong> {entry.source.title} · {entry.source.section} <span>({entry.source.reference})</span></p></details>)}</div> : <p className="boundary-note" role="status">Chưa tìm thấy câu trả lời trong tài liệu hướng dẫn hiện có. Nội dung về giấy phép xây dựng sẽ được bổ sung khi có tài liệu chính thức được duyệt.</p>}
-    <p className="muted citizen-qa-scope">Phần hỏi đáp hiện hướng dẫn cách sử dụng phần mềm. Nội dung pháp lý về cấp phép chưa được đưa vào khi chưa có nguồn chính thức.</p>
+    <div className="section-heading">
+      <div>
+        <span className="eyebrow">HỎI ĐÁP</span>
+        <h2 id="citizen-qa-title">Hướng dẫn người dân</h2>
+        <p className="muted">Tra cứu các bước xin GPXD xây mới, sửa chữa/cải tạo và giấy phép có thời hạn; mỗi mục kèm nguồn chính thức.</p>
+      </div>
+    </div>
+    <label className="search-box citizen-qa-search">
+      <Search size={17} aria-hidden="true"/>
+      <input
+        type="search"
+        aria-label="Tìm trong hướng dẫn và câu hỏi thường gặp"
+        placeholder="Tìm xây mới, cải tạo, giấy phép có thời hạn…"
+        value={query}
+        onChange={event => setQuery(event.target.value)}
+      />
+    </label>
+    {entries.length ? <div className="citizen-qa-list">
+      {entries.map(entry => <details key={entry.id} className="citizen-qa-item">
+        <summary>{entry.question}</summary>
+        <p className="citizen-qa-answer">{renderAnswer(entry.answer)}</p>
+        <p className="citizen-qa-source">
+          <strong>Nguồn:</strong> {entry.source.title} · {entry.source.section}
+          {entry.source.links?.map(link => <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>)}
+          {!entry.source.links?.length && <span> ({entry.source.reference})</span>}
+        </p>
+      </details>)}
+    </div> : <p className="boundary-note" role="status">Chưa tìm thấy nội dung phù hợp. Hãy thử từ khóa “xây mới”, “cải tạo” hoặc “có thời hạn”, hoặc tra thủ tục đang công bố trên Cổng Dịch vụ công.</p>}
+    <p className="muted citizen-qa-scope">Danh mục và thời hạn trong hướng dẫn được tổng hợp từ văn bản hiện hành. Thành phần hồ sơ, biểu mẫu và lệ phí có thể phụ thuộc loại công trình và thủ tục địa phương đang công bố; hãy kiểm tra nguồn chính thức trước khi nộp.</p>
   </section>;
 }
