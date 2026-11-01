@@ -65,6 +65,7 @@ export function matchesInspectionFilter(index: InspectionIndex, kind: 'permit' |
 }
 
 export function inspectionResultLabel(inspection: Inspection): string {
+  if (inspection.result === 'no_permit_presented' && !inspection.verified) return 'Chưa xuất trình GPXD · chưa xác minh';
   if (!inspection.verified || inspection.result === 'unverified') return 'Chưa đủ cơ sở xác minh';
   return ({ compliant: 'Phù hợp nội dung GPXD', wrong_permit: 'Sai nội dung GPXD', unlicensed: 'Thi công không có GPXD', no_permit_presented: 'Chưa xuất trình GPXD · cần xác minh', remediated: 'Đã khắc phục vi phạm' })[inspection.result] || 'Chưa đủ cơ sở xác minh';
 }
