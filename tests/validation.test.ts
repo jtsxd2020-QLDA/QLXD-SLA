@@ -63,6 +63,7 @@ test('not-started compatibility clients remain accepted while creation defaults 
 test('unpresented permit needs verification and cannot require remediation',()=>{
  const base={...location,address:'Địa chỉ kiểm thử',siteKey:'diem-kiem-tra',inspectionDate:'2026-10-10',inspector:'Cán bộ',result:'no_permit_presented',verified:true,basis:'',legalBasis:'Biên bản kiểm tra',comparisonMaterials:'Hồ sơ kiểm tra hiện trường',notes:'',remediationStatus:'not_applicable'};
  assert.equal(inspectionSchema.safeParse(base).success,true);
+ assert.equal(inspectionSchema.safeParse({...base,verified:false,legalBasis:'',comparisonMaterials:''}).success,true);
  assert.equal(inspectionSchema.safeParse({...base,remediationStatus:'pending'}).success,false);
  assert.equal(inspectionSchema.safeParse({...base,result:'unlicensed',remediationStatus:'pending'}).success,true);
 });

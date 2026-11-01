@@ -76,3 +76,17 @@ export function rankCommunes<T extends { communeCode: string }>(
     .filter(place => place.count > 0)
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'vi'));
 }
+
+
+export type PublicPermitSearchFields = { id:string; permitNumber:string; projectName:string; investorName:string; address:string; issuingAuthority:string; communeCode:string };
+export type PublicReportSearchFields = { id:string; publicCode:string };
+
+/** Search private permit fields on the server while returning only the public map marker. */
+export function matchesPublicPermitSearch(query:string,permit:PublicPermitSearchFields):boolean {
+  return matchesSearch(query,[permit.id,permit.permitNumber,permit.projectName,permit.investorName,permit.address,permit.issuingAuthority,permit.communeCode]);
+}
+
+/** Public reports are searchable only by their public tracking code or opaque ID. */
+export function matchesPublicReportSearch(query:string,report:PublicReportSearchFields):boolean {
+  return matchesSearch(query,[report.id,report.publicCode]);
+}
